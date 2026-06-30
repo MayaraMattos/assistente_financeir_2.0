@@ -296,6 +296,45 @@
 
   .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);}
   button:focus-visible, .icon-btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px;}
+
+  /* ===================== Responsividade ===================== */
+  table{ max-width:100%; }
+  @media (max-width:680px){
+    table{ display:block; overflow-x:auto; white-space:nowrap; -webkit-overflow-scrolling:touch; }
+    thead, tbody, tr{ display:table-row-group; }
+    thead{ display:table-header-group; }
+  }
+
+  @media (max-width:780px){
+    .page-head{ flex-wrap:wrap; gap:12px; align-items:flex-start; }
+    .page-head h1{ font-size:24px; }
+    nav{ overflow-x:auto; -webkit-overflow-scrolling:touch; flex-wrap:nowrap; }
+    nav button{ white-space:nowrap; flex-shrink:0; }
+    .sidebar{ gap:10px; }
+    .sidebar-foot{ flex-shrink:0; }
+    .donut-wrap{ justify-content:center; }
+    .calendar-grid{ gap:4px; }
+    .cal-day{ font-size:11px; border-radius:7px; }
+    .modal{ padding:22px; max-height:88vh; overflow-y:auto; }
+    .investment-card .top, .fatura-card .top{ flex-direction:column; gap:10px; align-items:flex-start; }
+    .investment-card .amount, .fatura-card .amount{ font-size:17px; }
+  }
+
+  @media (max-width:480px){
+    main{ padding:18px 14px; }
+    .page-head h1{ font-size:21px; }
+    .stat-card .value{ font-size:23px; }
+    .stat-card, .chart-card, .card, .investment-card, .fatura-card, .recorrencia-item{ padding:16px; }
+    .grid3, .charts-grid{ gap:10px; }
+    .cal-day{ font-size:10px; border-radius:6px; }
+    .cal-dow{ font-size:9.5px; }
+    .donut-wrap svg{ width:120px; height:120px; }
+    .bar-chart{ height:110px; }
+    .modal{ padding:18px; }
+    .date-badge{ font-size:10px; padding:5px 9px; }
+    .investment-card .actions, .fatura-actions{ flex-wrap:wrap; }
+    .investment-card .actions .btn, .fatura-actions .btn{ flex:1; min-width:100px; justify-content:center; }
+  }
 </style>
 </head>
 <body data-theme="light">
@@ -457,6 +496,21 @@
         </div>
         <div id="vaWrap" style="margin-top:20px;"></div>
       </div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <h3 style="margin:0;">Renda extra</h3>
+          <button class="btn ghost" id="addRendaExtraBtn">+ Registrar renda extra</button>
+        </div>
+        <div class="desc">Freelas, bicos, bônus, restituições ou qualquer outra entrada fora do salário fixo.</div>
+        <div class="result-row">
+          <div class="result-pill gold">
+            <div class="label">Renda extra este mês</div>
+            <div class="value mono" id="resRendaExtraMes">R$ 0,00</div>
+          </div>
+        </div>
+        <div id="rendaExtraWrap" style="margin-top:20px;"></div>
+      </div>
     </section>
 
     <!-- CALENDÁRIO -->
@@ -516,11 +570,12 @@ function loadData(){
         salario: d.salario || { valor:0, percentual:40, valorDiarioVA:0 },
         valeAlimentacao: d.valeAlimentacao || [],
         recorrencias: d.recorrencias || [],
-        cartoes: d.cartoes || []
+        cartoes: d.cartoes || [],
+        rendaExtra: d.rendaExtra || []
       };
     }
   }catch(e){ console.error('Erro ao carregar dados', e); }
-  return { contas: [], investimentos: [], salario:{ valor:0, percentual:40, valorDiarioVA:0 }, valeAlimentacao: [], recorrencias: [], cartoes: [] };
+  return { contas: [], investimentos: [], salario:{ valor:0, percentual:40, valorDiarioVA:0 }, valeAlimentacao: [], recorrencias: [], cartoes: [], rendaExtra: [] };
 }
 function saveData(){
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -786,12 +841,15 @@ function renderCartoes(){
     return;
   }
   const sorted = [...state.cartoes].sort((a,b)=> b.mes.localeCompare(a.mes));
+  const idsImportados = new Set();
+  state.cartoes.forEach(f=> (f.gastos||[]).forEach(g=>{ if(g.origemContaId) idsImportados.add(g.origemContaId); }));
+
   wrap.innerHTML = sorted.map(f=>{
     const gastos = f.gastos || [];
     const totalGastos = gastos.reduce((s,g)=>s+g.valor,0);
     const diferenca = f.valorFatura - totalGastos;
     const gastoPorFora = state.contas
-      .filter(c=> c.vencimento.slice(0,7)===f.mes && (c.categoria||'Outros') !== 'Cartão')
+      .filter(c=> c.vencimento.slice(0,7)===f.mes && (c.categoria||'Outros') !== 'Cartão' && !idsImportados.has(c.id))
       .reduce((s,c)=>s+c.valor,0);
 
     return `<div class="fatura-card">
@@ -818,14 +876,25 @@ function renderCartoes(){
       </div>
       <div class="fatura-gastos">
         ${gastos.length===0 ? `<div style="font-size:12.5px;color:var(--muted);">Nenhum gasto lançado ainda nesta fatura.</div>` :
-          gastos.map(g=>`<div class="gasto-item"><span>${escapeHtml(g.descricao)}</span><span style="display:flex;align-items:center;gap:10px;"><span class="mono">${fmtBRL(g.valor)}</span><button onclick="removerGastoCartao('${f.id}','${g.id}')" style="all:unset;cursor:pointer;font-size:11px;color:var(--muted);">excluir</button></span></div>`).join('')}
+          gastos.map(g=>`<div class="gasto-item"><span>${escapeHtml(g.descricao)}${g.origemContaId?' <span class="tag pendente" style="background:var(--parchment);color:var(--muted);font-size:9.5px;">recorrência</span>':''}</span><span style="display:flex;align-items:center;gap:10px;"><span class="mono">${fmtBRL(g.valor)}</span><button onclick="removerGastoCartao('${f.id}','${g.id}')" style="all:unset;cursor:pointer;font-size:11px;color:var(--muted);">excluir</button></span></div>`).join('')}
       </div>
       <div class="fatura-actions">
         <button class="btn ghost" onclick="abrirGastoCartao('${f.id}')">+ Gasto no cartão</button>
+        <button class="btn ghost" onclick="importarRecorrenciasFatura('${f.id}')">Importar recorrências do mês</button>
         <button class="btn danger" onclick="removerFatura('${f.id}')">Excluir fatura</button>
       </div>
     </div>`;
   }).join('');
+}
+
+function importarRecorrenciasFatura(faturaId){
+  const fatura = state.cartoes.find(f=>f.id===faturaId);
+  const jaImportados = new Set(fatura.gastos.filter(g=>g.origemContaId).map(g=>g.origemContaId));
+  const recorrentesMes = state.contas.filter(c=> c.recorrenciaId && c.vencimento.slice(0,7)===fatura.mes && !jaImportados.has(c.id));
+  if(recorrentesMes.length===0){ showToast('Nenhuma recorrência nova para importar neste mês'); return; }
+  recorrentesMes.forEach(c=> fatura.gastos.push({ id: uid(), descricao: c.nome, valor: c.valor, origemContaId: c.id }));
+  saveData(); renderCartoes(); renderDashboard();
+  showToast(`${recorrentesMes.length} recorrência(s) importada(s)`);
 }
 
 document.getElementById('addFaturaBtn').addEventListener('click', ()=>{
@@ -834,14 +903,26 @@ document.getElementById('addFaturaBtn').addEventListener('click', ()=>{
     fields:[
       {key:'mes', label:'Mês de referência', type:'month'},
       {key:'valorFatura', label:'Valor total da fatura (R$)', type:'number', placeholder:'0,00', step:'0.01'},
+      {key:'incluirRecorrencias', label:'Importar recorrências deste mês para a fatura?', type:'select', options:['Sim','Não']},
     ],
     onSubmit:(vals)=>{
       if(!vals.mes || !vals.valorFatura){ showToast('Preencha todos os campos'); return false; }
       const existente = state.cartoes.find(f=>f.mes===vals.mes);
       if(existente){ showToast('Já existe uma fatura para este mês — edite os gastos dela.'); return false; }
-      state.cartoes.push({ id: uid(), mes: vals.mes, valorFatura: parseFloat(vals.valorFatura), gastos: [] });
+      const fatura = { id: uid(), mes: vals.mes, valorFatura: parseFloat(vals.valorFatura), gastos: [] };
+
+      let importadas = 0;
+      if(vals.incluirRecorrencias !== 'Não'){
+        const recorrentesMes = state.contas.filter(c=> c.recorrenciaId && c.vencimento.slice(0,7)===vals.mes);
+        recorrentesMes.forEach(c=>{
+          fatura.gastos.push({ id: uid(), descricao: c.nome, valor: c.valor, origemContaId: c.id });
+          importadas++;
+        });
+      }
+
+      state.cartoes.push(fatura);
       saveData(); renderCartoes(); renderDashboard();
-      showToast('Fatura lançada');
+      showToast(importadas>0 ? `Fatura lançada com ${importadas} recorrência(s) importada(s)` : 'Fatura lançada');
       return true;
     }
   });
@@ -963,6 +1044,7 @@ function renderInvestimentos(){
       </div>
       <div class="actions">
         <button class="btn ghost" onclick="abrirAporte('${inv.id}')">+ Aporte</button>
+        <button class="btn ghost" onclick="editarInvestimento('${inv.id}')">Editar</button>
         <button class="btn danger" onclick="removerInvest('${inv.id}')">Excluir</button>
       </div>
       ${goalHtml}
@@ -1101,6 +1183,30 @@ function removerInvest(id){
   state.investimentos = state.investimentos.filter(x=>x.id!==id);
   saveData(); renderInvestimentos(); renderDashboard();
   showToast('Investimento excluído');
+}
+
+function editarInvestimento(id){
+  const inv = state.investimentos.find(x=>x.id===id);
+  if(!inv) return;
+  openModal({
+    title:'Editar meta',
+    fields:[
+      {key:'nome', label:'Nome', type:'text', placeholder:'Ex: Tesouro Selic', value: inv.nome},
+      {key:'tipo', label:'Tipo', type:'select', options:['Renda Fixa','Renda Variável','Fundo Imobiliário','Cripto','Outro'], value: inv.tipo},
+      {key:'valorInicial', label:'Valor inicial (R$)', type:'number', placeholder:'0,00', step:'0.01', value: inv.valorInicial},
+      {key:'dataInicio', label:'Data de início', type:'date', value: inv.dataInicio},
+    ],
+    onSubmit:(vals)=>{
+      if(!vals.nome || !vals.valorInicial || !vals.dataInicio){ showToast('Preencha todos os campos'); return false; }
+      inv.nome = vals.nome;
+      inv.tipo = vals.tipo;
+      inv.valorInicial = parseFloat(vals.valorInicial);
+      inv.dataInicio = vals.dataInicio;
+      saveData(); renderInvestimentos(); renderDashboard();
+      showToast('Meta atualizada');
+      return true;
+    }
+  });
 }
 
 document.getElementById('addInvestBtn').addEventListener('click', ()=>{
@@ -1320,7 +1426,8 @@ document.getElementById('importFile').addEventListener('change', (e)=>{
         salario: data.salario || { valor:0, percentual:40, valorDiarioVA:0 },
         valeAlimentacao: data.valeAlimentacao || [],
         recorrencias: data.recorrencias || [],
-        cartoes: data.cartoes || []
+        cartoes: data.cartoes || [],
+        rendaExtra: data.rendaExtra || []
       };
       saveData();
       gerarContasRecorrentes();
@@ -1350,6 +1457,7 @@ function renderRenda(){
 
   atualizarVaAutomatico();
   renderVA();
+  renderRendaExtra();
 }
 
 document.getElementById('salvarSalarioBtn').addEventListener('click', ()=>{
@@ -1425,6 +1533,54 @@ function removerVA(id){
   saveData(); renderVA();
   showToast('Registro removido');
 }
+
+/* ===================== RENDA EXTRA ===================== */
+function renderRendaExtra(){
+  const hoje = new Date();
+  const mesAtual = hoje.getFullYear()+'-'+String(hoje.getMonth()+1).padStart(2,'0');
+  const totalMes = state.rendaExtra.filter(r=>r.data.slice(0,7)===mesAtual).reduce((s,r)=>s+r.valor,0);
+  document.getElementById('resRendaExtraMes').textContent = fmtBRL(totalMes);
+
+  const wrap = document.getElementById('rendaExtraWrap');
+  if(state.rendaExtra.length===0){
+    wrap.innerHTML = `<div class="empty">Nenhuma renda extra registrada ainda.</div>`;
+    return;
+  }
+  const sorted = [...state.rendaExtra].sort((a,b)=> b.data.localeCompare(a.data));
+  wrap.innerHTML = `<table>
+    <thead><tr><th>Descrição</th><th>Data</th><th>Valor</th><th></th></tr></thead>
+    <tbody>${sorted.map(r=>`<tr>
+      <td>${escapeHtml(r.descricao)}</td>
+      <td class="mono">${fmtDate(r.data)}</td>
+      <td class="mono">${fmtBRL(r.valor)}</td>
+      <td><div class="row-actions"><button onclick="removerRendaExtra('${r.id}')">excluir</button></div></td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+function removerRendaExtra(id){
+  state.rendaExtra = state.rendaExtra.filter(x=>x.id!==id);
+  saveData(); renderRendaExtra();
+  showToast('Renda extra removida');
+}
+
+document.getElementById('addRendaExtraBtn').addEventListener('click', ()=>{
+  openModal({
+    title:'Registrar renda extra',
+    fields:[
+      {key:'descricao', label:'Descrição', type:'text', placeholder:'Ex: Freela, bônus, restituição...'},
+      {key:'valor', label:'Valor (R$)', type:'number', placeholder:'0,00', step:'0.01'},
+      {key:'data', label:'Data', type:'date'},
+    ],
+    onSubmit:(vals)=>{
+      if(!vals.descricao || !vals.valor || !vals.data){ showToast('Preencha todos os campos'); return false; }
+      state.rendaExtra.push({ id: uid(), descricao: vals.descricao, valor: parseFloat(vals.valor), data: vals.data });
+      saveData(); renderRendaExtra();
+      showToast('Renda extra registrada');
+      return true;
+    }
+  });
+});
 
 document.getElementById('addVaBtn').addEventListener('click', ()=>{
   openModal({
