@@ -256,6 +256,20 @@
   .recorrencia-item .right{display:flex;align-items:center;gap:14px;}
   .recorrencia-item .amount{font-family:'Space Mono',monospace;font-weight:700;color:var(--gold);font-size:14px;}
 
+  .fatura-card{background:var(--paper);border-radius:16px;padding:22px;margin-bottom:14px;box-shadow:var(--shadow);}
+  .fatura-card .top{display:flex;justify-content:space-between;align-items:flex-start;}
+  .fatura-card .name{font-family:'Fraunces',serif;font-size:17px;font-weight:600;}
+  .fatura-card .sub{font-size:11.5px;color:var(--muted);margin-top:3px;text-transform:capitalize;}
+  .fatura-card .amount{font-family:'Space Mono',monospace;font-size:19px;font-weight:700;}
+  .fatura-compare{display:flex;gap:14px;margin-top:16px;flex-wrap:wrap;}
+  .fatura-compare .pill{flex:1;min-width:140px;background:var(--parchment);border-radius:12px;padding:14px 16px;}
+  .fatura-compare .pill .label{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:500;}
+  .fatura-compare .pill .val{font-family:'Space Mono',monospace;font-size:16px;font-weight:700;margin-top:6px;}
+  .fatura-gastos{margin-top:16px;}
+  .fatura-gastos .gasto-item{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px;}
+  .fatura-gastos .gasto-item:last-child{border-bottom:none;}
+  .fatura-actions{margin-top:16px;display:flex;gap:10px;}
+
   /* Gráficos */
   .charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:32px;}
   @media (max-width:900px){.charts-grid{grid-template-columns:1fr;}}
@@ -294,7 +308,7 @@
     <nav>
       <button class="nav-btn active" data-page="dashboard"><span class="num">01</span> Dashboard</button>
       <button class="nav-btn" data-page="contas"><span class="num">02</span> Contas</button>
-      <button class="nav-btn" data-page="investimentos"><span class="num">03</span> Investimentos</button>
+      <button class="nav-btn" data-page="investimentos"><span class="num">03</span> Metas</button>
       <button class="nav-btn" data-page="renda"><span class="num">04</span> Renda</button>
       <button class="nav-btn" data-page="calendario"><span class="num">05</span> Calendário</button>
     </nav>
@@ -349,7 +363,7 @@
       <div class="section-title"><h2>Próximos vencimentos</h2></div>
       <div id="dashUpcoming"></div>
 
-      <div class="section-title"><h2>Investimentos recentes</h2></div>
+      <div class="section-title"><h2>Metas recentes</h2></div>
       <div id="dashInvest"></div>
     </section>
 
@@ -367,16 +381,22 @@
       </div>
       <div id="recorrenciasWrap"></div>
       <div id="contasWrap"></div>
+
+      <div class="section-title"><h2>Cartão de crédito</h2><button class="btn ghost" id="addFaturaBtn">+ Nova fatura</button></div>
+      <div class="card" style="margin-bottom:18px;">
+        <div class="desc" style="margin-bottom:0;">Lance a fatura de cada mês e os gastos feitos no cartão dentro dela — assim dá pra comparar quanto saiu no cartão e quanto saiu por fora (outras contas e formas de pagamento).</div>
+      </div>
+      <div id="cartoesWrap"></div>
     </section>
 
     <!-- INVESTIMENTOS -->
     <section id="page-investimentos" class="hidden">
       <div class="page-head">
         <div>
-          <h1>Investimentos</h1>
-          <div class="sub">Seus aportes e posições</div>
+          <h1>Metas</h1>
+          <div class="sub">Suas metas financeiras, aportes e a melhor forma de alcançá-las</div>
         </div>
-        <button class="btn" id="addInvestBtn">+ Novo investimento</button>
+        <button class="btn" id="addInvestBtn">+ Nova meta</button>
       </div>
       <div id="investWrap"></div>
     </section>
@@ -495,11 +515,12 @@ function loadData(){
         investimentos: d.investimentos || [],
         salario: d.salario || { valor:0, percentual:40, valorDiarioVA:0 },
         valeAlimentacao: d.valeAlimentacao || [],
-        recorrencias: d.recorrencias || []
+        recorrencias: d.recorrencias || [],
+        cartoes: d.cartoes || []
       };
     }
   }catch(e){ console.error('Erro ao carregar dados', e); }
-  return { contas: [], investimentos: [], salario:{ valor:0, percentual:40, valorDiarioVA:0 }, valeAlimentacao: [], recorrencias: [] };
+  return { contas: [], investimentos: [], salario:{ valor:0, percentual:40, valorDiarioVA:0 }, valeAlimentacao: [], recorrencias: [], cartoes: [] };
 }
 function saveData(){
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -541,7 +562,7 @@ document.querySelectorAll('.nav-btn').forEach(btn=>{
     btn.classList.add('active');
     pages.forEach(p=>document.getElementById('page-'+p).classList.toggle('hidden', p!==btn.dataset.page));
     if(btn.dataset.page==='dashboard') renderDashboard();
-    if(btn.dataset.page==='contas'){ gerarContasRecorrentes(); renderContas(); renderRecorrencias(); }
+    if(btn.dataset.page==='contas'){ gerarContasRecorrentes(); renderContas(); renderRecorrencias(); renderCartoes(); }
     if(btn.dataset.page==='renda') renderRenda();
     if(btn.dataset.page==='calendario') renderCalendario();
   });
@@ -586,17 +607,19 @@ function renderContas(){
       <td>${escapeHtml(c.nome)}</td>
       <td class="mono">${fmtBRL(c.valor)}</td>
       <td class="mono">${fmtDate(c.vencimento)}</td>
+      <td><span class="tag pendente" style="background:var(--parchment);color:var(--muted);">${escapeHtml(c.categoria||'Outros')}</span></td>
       <td><span class="tag ${s}">${statusLabel(s)}</span></td>
       <td>
         <div class="row-actions">
           ${!c.pago ? `<button onclick="marcarPago('${c.id}')">marcar pago</button>` : `<button onclick="marcarPendente('${c.id}')">reabrir</button>`}
+          <button onclick="editarConta('${c.id}')">editar</button>
           <button onclick="removerConta('${c.id}')">excluir</button>
         </div>
       </td>
     </tr>`;
   }).join('');
   wrap.innerHTML = `<table>
-    <thead><tr><th>Conta</th><th>Valor</th><th>Vencimento</th><th>Status</th><th></th></tr></thead>
+    <thead><tr><th>Conta</th><th>Valor</th><th>Vencimento</th><th>Categoria</th><th>Status</th><th></th></tr></thead>
     <tbody>${rows}</tbody>
   </table>`;
 }
@@ -614,6 +637,30 @@ function removerConta(id){
   state.contas = state.contas.filter(x=>x.id!==id);
   saveData(); renderContas(); renderDashboard();
   showToast('Conta excluída');
+}
+
+function editarConta(id){
+  const c = state.contas.find(x=>x.id===id);
+  if(!c) return;
+  openModal({
+    title:'Editar conta',
+    fields:[
+      {key:'nome', label:'Nome da conta', type:'text', placeholder:'Ex: Aluguel', value: c.nome},
+      {key:'valor', label:'Valor (R$)', type:'number', placeholder:'0,00', step:'0.01', value: c.valor},
+      {key:'vencimento', label:'Vencimento', type:'date', value: c.vencimento},
+      {key:'categoria', label:'Categoria', type:'select', options: CATEGORIAS, value: c.categoria||'Outros'},
+    ],
+    onSubmit:(vals)=>{
+      if(!vals.nome || !vals.valor || !vals.vencimento){ showToast('Preencha todos os campos'); return false; }
+      c.nome = vals.nome;
+      c.valor = parseFloat(vals.valor);
+      c.vencimento = vals.vencimento;
+      c.categoria = vals.categoria || 'Outros';
+      saveData(); renderContas(); renderDashboard();
+      showToast('Conta atualizada');
+      return true;
+    }
+  });
 }
 
 document.getElementById('addContaBtn').addEventListener('click', ()=>{
@@ -731,6 +778,106 @@ document.getElementById('addRecorrenciaBtn').addEventListener('click', ()=>{
   });
 });
 
+/* ===================== CARTÃO DE CRÉDITO ===================== */
+function renderCartoes(){
+  const wrap = document.getElementById('cartoesWrap');
+  if(state.cartoes.length===0){
+    wrap.innerHTML = `<div class="empty"><span class="serif">Nenhuma fatura lançada</span>Registre a fatura do mês para começar a separar o que foi gasto no cartão do que foi gasto por fora.</div>`;
+    return;
+  }
+  const sorted = [...state.cartoes].sort((a,b)=> b.mes.localeCompare(a.mes));
+  wrap.innerHTML = sorted.map(f=>{
+    const gastos = f.gastos || [];
+    const totalGastos = gastos.reduce((s,g)=>s+g.valor,0);
+    const diferenca = f.valorFatura - totalGastos;
+    const gastoPorFora = state.contas
+      .filter(c=> c.vencimento.slice(0,7)===f.mes && (c.categoria||'Outros') !== 'Cartão')
+      .reduce((s,c)=>s+c.valor,0);
+
+    return `<div class="fatura-card">
+      <div class="top">
+        <div>
+          <div class="name">Fatura — ${mesLabel(f.mes)}</div>
+          <div class="sub">${gastos.length} gasto(s) lançado(s)</div>
+        </div>
+        <div class="amount" style="color:var(--terracotta);">${fmtBRL(f.valorFatura)}</div>
+      </div>
+      <div class="fatura-compare">
+        <div class="pill">
+          <div class="label">Lançado no cartão</div>
+          <div class="val" style="color:${Math.abs(diferenca)<0.01?'var(--green)':'var(--gold)'};">${fmtBRL(totalGastos)}</div>
+        </div>
+        <div class="pill">
+          <div class="label">${diferenca>=0?'Ainda não lançado':'Lançado a mais que a fatura'}</div>
+          <div class="val">${fmtBRL(Math.abs(diferenca))}</div>
+        </div>
+        <div class="pill">
+          <div class="label">Gasto por fora (outras contas do mês)</div>
+          <div class="val" style="color:var(--green);">${fmtBRL(gastoPorFora)}</div>
+        </div>
+      </div>
+      <div class="fatura-gastos">
+        ${gastos.length===0 ? `<div style="font-size:12.5px;color:var(--muted);">Nenhum gasto lançado ainda nesta fatura.</div>` :
+          gastos.map(g=>`<div class="gasto-item"><span>${escapeHtml(g.descricao)}</span><span style="display:flex;align-items:center;gap:10px;"><span class="mono">${fmtBRL(g.valor)}</span><button onclick="removerGastoCartao('${f.id}','${g.id}')" style="all:unset;cursor:pointer;font-size:11px;color:var(--muted);">excluir</button></span></div>`).join('')}
+      </div>
+      <div class="fatura-actions">
+        <button class="btn ghost" onclick="abrirGastoCartao('${f.id}')">+ Gasto no cartão</button>
+        <button class="btn danger" onclick="removerFatura('${f.id}')">Excluir fatura</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+document.getElementById('addFaturaBtn').addEventListener('click', ()=>{
+  openModal({
+    title:'Nova fatura do cartão',
+    fields:[
+      {key:'mes', label:'Mês de referência', type:'month'},
+      {key:'valorFatura', label:'Valor total da fatura (R$)', type:'number', placeholder:'0,00', step:'0.01'},
+    ],
+    onSubmit:(vals)=>{
+      if(!vals.mes || !vals.valorFatura){ showToast('Preencha todos os campos'); return false; }
+      const existente = state.cartoes.find(f=>f.mes===vals.mes);
+      if(existente){ showToast('Já existe uma fatura para este mês — edite os gastos dela.'); return false; }
+      state.cartoes.push({ id: uid(), mes: vals.mes, valorFatura: parseFloat(vals.valorFatura), gastos: [] });
+      saveData(); renderCartoes(); renderDashboard();
+      showToast('Fatura lançada');
+      return true;
+    }
+  });
+});
+
+function abrirGastoCartao(faturaId){
+  openModal({
+    title:'Novo gasto no cartão',
+    fields:[
+      {key:'descricao', label:'Descrição', type:'text', placeholder:'Ex: Mercado, Uber, Farmácia...'},
+      {key:'valor', label:'Valor (R$)', type:'number', placeholder:'0,00', step:'0.01'},
+    ],
+    onSubmit:(vals)=>{
+      if(!vals.descricao || !vals.valor){ showToast('Preencha todos os campos'); return false; }
+      const fatura = state.cartoes.find(f=>f.id===faturaId);
+      fatura.gastos.push({ id: uid(), descricao: vals.descricao, valor: parseFloat(vals.valor) });
+      saveData(); renderCartoes(); renderDashboard();
+      showToast('Gasto lançado');
+      return true;
+    }
+  });
+}
+
+function removerGastoCartao(faturaId, gastoId){
+  const fatura = state.cartoes.find(f=>f.id===faturaId);
+  fatura.gastos = fatura.gastos.filter(g=>g.id!==gastoId);
+  saveData(); renderCartoes(); renderDashboard();
+  showToast('Gasto removido');
+}
+
+function removerFatura(id){
+  if(!confirm('Excluir esta fatura e todos os gastos lançados nela?')) return;
+  state.cartoes = state.cartoes.filter(f=>f.id!==id);
+  saveData(); renderCartoes(); renderDashboard();
+  showToast('Fatura excluída');
+}
 
 function investTotal(inv){
   return inv.valorInicial + (inv.aportes||[]).reduce((s,a)=>s+a.valor,0);
@@ -789,6 +936,7 @@ function renderInvestimentos(){
       }
       goalHtml = `<div class="goal-block">
         <div class="goal-head"><span>Meta: ${fmtBRL(inv.metaValor)} até ${fmtDate(inv.metaData)}</span><span class="pct">${a.pct.toFixed(0)}%</span></div>
+        ${inv.metaDescricao ? `<div style="font-size:12.5px;color:var(--muted);margin-bottom:10px;">"${escapeHtml(inv.metaDescricao)}"</div>` : ''}
         <div class="progress-track"><div class="progress-fill ${a.noRitmo||a.atingida?'':'behind'}" style="width:${a.pct}%"></div></div>
         <div class="goal-stats">
           <span>Faltam <b>${fmtBRL(a.restante)}</b></span>
@@ -827,13 +975,15 @@ function editarMeta(id){
   openModal({
     title:'Definir meta',
     fields:[
-      {key:'metaValor', label:'Valor da meta (R$)', type:'number', placeholder:'0,00', step:'0.01'},
-      {key:'metaData', label:'Data alvo', type:'date'},
+      {key:'metaValor', label:'Valor da meta (R$)', type:'number', placeholder:'0,00', step:'0.01', value: inv.metaValor},
+      {key:'metaData', label:'Data alvo', type:'date', value: inv.metaData},
+      {key:'metaDescricao', label:'Descreva a meta (opcional)', type:'textarea', placeholder:'Ex: Juntar dinheiro para dar entrada num carro', value: inv.metaDescricao},
     ],
     onSubmit:(vals)=>{
       if(!vals.metaValor || !vals.metaData){ showToast('Preencha todos os campos'); return false; }
       inv.metaValor = parseFloat(vals.metaValor);
       inv.metaData = vals.metaData;
+      inv.metaDescricao = vals.metaDescricao || '';
       saveData(); renderInvestimentos(); renderDashboard();
       showToast('Meta definida');
       return true;
@@ -907,6 +1057,7 @@ function estudoAlocacao(id){
   overlay.className = 'overlay study-modal';
   overlay.innerHTML = `<div class="modal">
     <h3>Estudo de alocação — ${escapeHtml(inv.nome)}</h3>
+    ${inv.metaDescricao ? `<div class="goal-msg" style="margin-bottom:16px;"><b>Sua meta:</b> ${escapeHtml(inv.metaDescricao)}</div>` : ''}
     <div class="study-horizon">
       <span class="badge">${perfil.badge}</span>
       <p>${perfil.texto}</p>
@@ -954,7 +1105,7 @@ function removerInvest(id){
 
 document.getElementById('addInvestBtn').addEventListener('click', ()=>{
   openModal({
-    title:'Novo investimento',
+    title:'Nova meta de investimento',
     fields:[
       {key:'nome', label:'Nome', type:'text', placeholder:'Ex: Tesouro Selic'},
       {key:'tipo', label:'Tipo', type:'select', options:['Renda Fixa','Renda Variável','Fundo Imobiliário','Cripto','Outro']},
@@ -962,6 +1113,7 @@ document.getElementById('addInvestBtn').addEventListener('click', ()=>{
       {key:'dataInicio', label:'Data de início', type:'date'},
       {key:'metaValor', label:'Meta (R$) — opcional', type:'number', placeholder:'0,00', step:'0.01'},
       {key:'metaData', label:'Data alvo da meta — opcional', type:'date'},
+      {key:'metaDescricao', label:'Descreva a meta (opcional)', type:'textarea', placeholder:'Ex: Juntar dinheiro para dar entrada num carro'},
     ],
     onSubmit:(vals)=>{
       if(!vals.nome || !vals.valorInicial || !vals.dataInicio){ showToast('Preencha todos os campos'); return false; }
@@ -969,10 +1121,11 @@ document.getElementById('addInvestBtn').addEventListener('click', ()=>{
       if(vals.metaValor && vals.metaData){
         novo.metaValor = parseFloat(vals.metaValor);
         novo.metaData = vals.metaData;
+        novo.metaDescricao = vals.metaDescricao || '';
       }
       state.investimentos.push(novo);
       saveData(); renderInvestimentos(); renderDashboard();
-      showToast('Investimento adicionado');
+      showToast('Meta criada');
       return true;
     }
   });
@@ -1024,6 +1177,7 @@ function buildDonut(items, size=150){
   const total = items.reduce((s,i)=>s+i.value,0);
   if(total<=0) return null;
   const r = size/2 - 14, c = size/2, circ = 2*Math.PI*r;
+  const paperColor = getComputedStyle(document.body).getPropertyValue('--paper').trim() || '#FFFFFF';
   let acc = 0;
   const circles = items.map(it=>{
     const pct = it.value/total;
@@ -1034,7 +1188,7 @@ function buildDonut(items, size=150){
       stroke-dasharray="${dash} ${circ-dash}" stroke-dashoffset="${offset}" transform="rotate(-90 ${c} ${c})" />`;
   }).join('');
   return `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}">${circles}
-    <circle cx="${c}" cy="${c}" r="${r-13}" fill="var(--paper)" />
+    <circle cx="${c}" cy="${c}" r="${r-13}" fill="${paperColor}" />
   </svg>`;
 }
 
@@ -1105,9 +1259,12 @@ function openModal({title, fields, onSubmit}){
     <form id="modalForm">
       ${fields.map(f=>{
         if(f.type==='select'){
-          return `<div class="field"><label>${f.label}</label><select name="${f.key}">${f.options.map(o=>`<option value="${o}">${o}</option>`).join('')}</select></div>`;
+          return `<div class="field"><label>${f.label}</label><select name="${f.key}">${f.options.map(o=>`<option value="${o}" ${f.value===o?'selected':''}>${o}</option>`).join('')}</select></div>`;
         }
-        return `<div class="field"><label>${f.label}</label><input name="${f.key}" type="${f.type}" placeholder="${f.placeholder||''}" ${f.step?`step="${f.step}"`:''}></div>`;
+        if(f.type==='textarea'){
+          return `<div class="field"><label>${f.label}</label><textarea name="${f.key}" placeholder="${f.placeholder||''}" rows="3" style="width:100%;padding:11px 13px;border-radius:10px;border:1px solid var(--line);background:var(--parchment);color:var(--ink);font-size:14px;font-family:'Inter',sans-serif;resize:vertical;">${f.value!=null?escapeHtml(f.value):''}</textarea></div>`;
+        }
+        return `<div class="field"><label>${f.label}</label><input name="${f.key}" type="${f.type}" placeholder="${f.placeholder||''}" ${f.step?`step="${f.step}"`:''} value="${f.value!=null?f.value:''}"></div>`;
       }).join('')}
       <div class="modal-actions">
         <button type="button" class="btn ghost" id="modalCancel">Cancelar</button>
@@ -1162,7 +1319,8 @@ document.getElementById('importFile').addEventListener('change', (e)=>{
         investimentos: data.investimentos,
         salario: data.salario || { valor:0, percentual:40, valorDiarioVA:0 },
         valeAlimentacao: data.valeAlimentacao || [],
-        recorrencias: data.recorrencias || []
+        recorrencias: data.recorrencias || [],
+        cartoes: data.cartoes || []
       };
       saveData();
       gerarContasRecorrentes();
@@ -1403,6 +1561,7 @@ document.getElementById('calToday').addEventListener('click', ()=>{ calCursor = 
 gerarContasRecorrentes();
 renderContas();
 renderRecorrencias();
+renderCartoes();
 renderInvestimentos();
 renderDashboard();
 </script>
