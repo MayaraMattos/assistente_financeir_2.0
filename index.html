@@ -250,6 +250,12 @@
   .holiday-list .hl-tag.nacional{background:var(--terracotta-soft);color:var(--terracotta);}
   .holiday-list .hl-tag.municipal{background:var(--gold-soft);color:var(--gold);}
 
+  .recorrencia-item{background:var(--paper);border-radius:14px;padding:16px 18px;margin-bottom:10px;box-shadow:var(--shadow-sm);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;}
+  .recorrencia-item .info .name{font-weight:600;font-size:14px;}
+  .recorrencia-item .info .sub{font-size:11.5px;color:var(--muted);margin-top:3px;}
+  .recorrencia-item .right{display:flex;align-items:center;gap:14px;}
+  .recorrencia-item .amount{font-family:'Space Mono',monospace;font-weight:700;color:var(--gold);font-size:14px;}
+
   .toast{
     position:fixed;bottom:24px;right:24px;background:var(--ink);color:var(--parchment);
     padding:13px 20px;border-radius:10px;font-size:13px;box-shadow:0 8px 28px rgba(0,0,0,.22);
@@ -326,8 +332,12 @@
           <h1>Contas</h1>
           <div class="sub">Contas a pagar e seus vencimentos</div>
         </div>
-        <button class="btn" id="addContaBtn">+ Nova conta</button>
+        <div style="display:flex;gap:10px;">
+          <button class="btn ghost" id="addRecorrenciaBtn">+ Recorrência</button>
+          <button class="btn" id="addContaBtn">+ Nova conta</button>
+        </div>
       </div>
+      <div id="recorrenciasWrap"></div>
       <div id="contasWrap"></div>
     </section>
 
@@ -381,10 +391,23 @@
       <div class="card">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
           <h3 style="margin:0;">Vale alimentação</h3>
-          <button class="btn ghost" id="addVaBtn">+ Registrar VA do mês</button>
+          <button class="btn ghost" id="addVaBtn">+ Registrar valor manual</button>
         </div>
-        <div class="desc">Acompanhe o valor de vale alimentação recebido em cada mês.</div>
-        <div id="vaWrap"></div>
+        <div class="desc">Informe o valor diário recebido — o app calcula automaticamente o total do mês atual com base nos dias úteis (descontando fins de semana e feriados nacionais e de Campo Grande/MS).</div>
+        <div class="form-row">
+          <div class="field">
+            <label>Valor diário do VA (R$)</label>
+            <input type="number" step="0.01" id="vaValorDiario" placeholder="25,00">
+          </div>
+        </div>
+        <button class="btn" id="salvarVaDiarioBtn">Salvar valor diário</button>
+        <div class="result-row">
+          <div class="result-pill green">
+            <div class="label" id="vaMesAtualLabel">VA estimado este mês</div>
+            <div class="value mono" id="resVaMesAtual">R$ 0,00</div>
+          </div>
+        </div>
+        <div id="vaWrap" style="margin-top:20px;"></div>
       </div>
     </section>
 
@@ -442,12 +465,13 @@ function loadData(){
       return {
         contas: d.contas || [],
         investimentos: d.investimentos || [],
-        salario: d.salario || { valor:0, percentual:40 },
-        valeAlimentacao: d.valeAlimentacao || []
+        salario: d.salario || { valor:0, percentual:40, valorDiarioVA:0 },
+        valeAlimentacao: d.valeAlimentacao || [],
+        recorrencias: d.recorrencias || []
       };
     }
   }catch(e){ console.error('Erro ao carregar dados', e); }
-  return { contas: [], investimentos: [], salario:{ valor:0, percentual:40 }, valeAlimentacao: [] };
+  return { contas: [], investimentos: [], salario:{ valor:0, percentual:40, valorDiarioVA:0 }, valeAlimentacao: [], recorrencias: [] };
 }
 function saveData(){
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -485,6 +509,7 @@ document.querySelectorAll('.nav-btn').forEach(btn=>{
     btn.classList.add('active');
     pages.forEach(p=>document.getElementById('page-'+p).classList.toggle('hidden', p!==btn.dataset.page));
     if(btn.dataset.page==='dashboard') renderDashboard();
+    if(btn.dataset.page==='contas'){ gerarContasRecorrentes(); renderContas(); renderRecorrencias(); }
     if(btn.dataset.page==='renda') renderRenda();
     if(btn.dataset.page==='calendario') renderCalendario();
   });
@@ -577,7 +602,101 @@ document.getElementById('addContaBtn').addEventListener('click', ()=>{
   });
 });
 
-/* ===================== INVESTIMENTOS ===================== */
+/* ===================== RECORRÊNCIAS ===================== */
+/* Gera automaticamente as contas de cada mês, do mês de início até o mês atual,
+   respeitando a duração definida (ou indefinidamente, se não houver limite). */
+function gerarContasRecorrentes(){
+  const hoje = new Date();
+  const limiteAtual = hoje.getFullYear()+'-'+String(hoje.getMonth()+1).padStart(2,'0');
+  let mudou = false;
+
+  state.recorrencias.forEach(rec=>{
+    let [ay, am] = rec.mesInicio.split('-').map(Number);
+    let cursor = new Date(ay, am-1, 1);
+    let count = 0;
+    while(true){
+      const mesRef = cursor.getFullYear()+'-'+String(cursor.getMonth()+1).padStart(2,'0');
+      if(mesRef > limiteAtual) break;
+      if(rec.duracaoMeses && count >= rec.duracaoMeses) break;
+
+      const jaExiste = state.contas.some(c=> c.recorrenciaId===rec.id && c.mesRef===mesRef);
+      if(!jaExiste){
+        const ultimoDia = new Date(cursor.getFullYear(), cursor.getMonth()+1, 0).getDate();
+        const dia = Math.min(rec.diaVencimento, ultimoDia);
+        const vencimento = `${mesRef}-${String(dia).padStart(2,'0')}`;
+        state.contas.push({ id: uid(), nome: rec.nome, valor: rec.valor, vencimento, pago:false, recorrenciaId: rec.id, mesRef });
+        mudou = true;
+      }
+      count++;
+      cursor.setMonth(cursor.getMonth()+1);
+    }
+  });
+
+  if(mudou) saveData();
+}
+
+function renderRecorrencias(){
+  const wrap = document.getElementById('recorrenciasWrap');
+  if(state.recorrencias.length===0){ wrap.innerHTML=''; return; }
+  wrap.innerHTML = `<div class="section-title" style="margin-top:0;"><h2>Recorrências ativas</h2></div>` +
+    state.recorrencias.map(rec=>{
+      const geradas = state.contas.filter(c=>c.recorrenciaId===rec.id).length;
+      const duracaoTexto = rec.duracaoMeses ? `${geradas}/${rec.duracaoMeses} meses gerados` : `${geradas} meses gerados · indefinida`;
+      return `<div class="recorrencia-item">
+        <div class="info">
+          <div class="name">${escapeHtml(rec.nome)}</div>
+          <div class="sub">todo dia ${rec.diaVencimento} · desde ${mesLabel(rec.mesInicio)} · ${duracaoTexto}</div>
+        </div>
+        <div class="right">
+          <span class="amount">${fmtBRL(rec.valor)}</span>
+          <button class="row-actions" style="all:unset;cursor:pointer;font-size:12px;color:var(--muted);" onclick="removerRecorrencia('${rec.id}')">excluir</button>
+        </div>
+      </div>`;
+    }).join('');
+}
+
+function removerRecorrencia(id){
+  if(!confirm('Excluir esta recorrência? As contas já geradas para meses anteriores não serão removidas — só deixa de gerar novos meses.')) return;
+  state.recorrencias = state.recorrencias.filter(x=>x.id!==id);
+  saveData(); renderRecorrencias();
+  showToast('Recorrência removida');
+}
+
+document.getElementById('addRecorrenciaBtn').addEventListener('click', ()=>{
+  const hoje = new Date();
+  const mesAtualStr = hoje.getFullYear()+'-'+String(hoje.getMonth()+1).padStart(2,'0');
+  openModal({
+    title:'Nova recorrência',
+    fields:[
+      {key:'nome', label:'Nome', type:'text', placeholder:'Ex: Netflix, Academia...'},
+      {key:'valor', label:'Valor (R$)', type:'number', placeholder:'0,00', step:'0.01'},
+      {key:'diaVencimento', label:'Dia do vencimento', type:'number', placeholder:'10'},
+      {key:'mesInicio', label:'A partir de qual mês', type:'month'},
+      {key:'duracaoMeses', label:'Duração em meses (vazio = indefinida)', type:'number', placeholder:'Ex: 6'},
+    ],
+    onSubmit:(vals)=>{
+      if(!vals.nome || !vals.valor || !vals.diaVencimento || !vals.mesInicio){ showToast('Preencha nome, valor, dia e mês de início'); return false; }
+      const dia = parseInt(vals.diaVencimento,10);
+      if(dia < 1 || dia > 31){ showToast('Dia de vencimento inválido'); return false; }
+      const rec = {
+        id: uid(),
+        nome: vals.nome,
+        valor: parseFloat(vals.valor),
+        diaVencimento: dia,
+        mesInicio: vals.mesInicio || mesAtualStr,
+        duracaoMeses: vals.duracaoMeses ? parseInt(vals.duracaoMeses,10) : null,
+      };
+      state.recorrencias.push(rec);
+      saveData();
+      gerarContasRecorrentes();
+      renderRecorrencias(); renderContas(); renderDashboard();
+      showToast('Recorrência criada e contas geradas');
+      return true;
+    }
+  });
+});
+
+
 function investTotal(inv){
   return inv.valorInicial + (inv.aportes||[]).reduce((s,a)=>s+a.valor,0);
 }
@@ -925,9 +1044,12 @@ document.getElementById('importFile').addEventListener('change', (e)=>{
       state = {
         contas: data.contas,
         investimentos: data.investimentos,
-        salario: data.salario || { valor:0, percentual:40 },
-        valeAlimentacao: data.valeAlimentacao || []
+        salario: data.salario || { valor:0, percentual:40, valorDiarioVA:0 },
+        valeAlimentacao: data.valeAlimentacao || [],
+        recorrencias: data.recorrencias || []
       };
+      saveData();
+      gerarContasRecorrentes();
       saveData();
       renderContas(); renderInvestimentos(); renderDashboard();
       showToast('Dados importados com sucesso');
@@ -944,12 +1066,15 @@ document.getElementById('importFile').addEventListener('change', (e)=>{
 function renderRenda(){
   document.getElementById('salarioValor').value = state.salario.valor || '';
   document.getElementById('salarioPct').value = state.salario.percentual || '';
+  document.getElementById('vaValorDiario').value = state.salario.valorDiarioVA || '';
   const valor = state.salario.valor || 0;
   const pct = state.salario.percentual || 0;
   const adiantamento = valor * (pct/100);
   const saldo = valor - adiantamento;
   document.getElementById('resAdiantamento').textContent = fmtBRL(adiantamento);
   document.getElementById('resSaldo').textContent = fmtBRL(saldo);
+
+  atualizarVaAutomatico();
   renderVA();
 }
 
@@ -957,16 +1082,50 @@ document.getElementById('salvarSalarioBtn').addEventListener('click', ()=>{
   const valor = parseFloat(document.getElementById('salarioValor').value);
   const pct = parseFloat(document.getElementById('salarioPct').value);
   if(isNaN(valor) || isNaN(pct)){ showToast('Preencha salário e percentual'); return; }
-  state.salario = { valor, percentual: pct };
+  state.salario.valor = valor;
+  state.salario.percentual = pct;
   saveData();
   renderRenda();
   showToast('Salário atualizado');
+});
+
+document.getElementById('salvarVaDiarioBtn').addEventListener('click', ()=>{
+  const valorDiario = parseFloat(document.getElementById('vaValorDiario').value);
+  if(isNaN(valorDiario)){ showToast('Informe o valor diário do VA'); return; }
+  state.salario.valorDiarioVA = valorDiario;
+  saveData();
+  renderRenda();
+  showToast('Valor diário do VA salvo');
 });
 
 function mesLabel(mesStr){
   const [y,m] = mesStr.split('-');
   const nomes = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
   return `${nomes[parseInt(m,10)-1]} de ${y}`;
+}
+
+/* Calcula automaticamente o VA do mês atual (valor diário x dias úteis) e mantém
+   sincronizado em valeAlimentacao, sem sobrescrever registros que o usuário editou manualmente. */
+function atualizarVaAutomatico(){
+  const valorDiario = state.salario.valorDiarioVA || 0;
+  const hoje = new Date();
+  const mesAtual = hoje.getFullYear()+'-'+String(hoje.getMonth()+1).padStart(2,'0');
+  const diasUteis = calcularDiasUteis(hoje.getFullYear(), hoje.getMonth());
+  const valorCalculado = valorDiario * diasUteis;
+
+  document.getElementById('vaMesAtualLabel').textContent = `VA estimado este mês (${diasUteis} dias úteis)`;
+  document.getElementById('resVaMesAtual').textContent = fmtBRL(valorCalculado);
+
+  if(valorDiario > 0){
+    let entrada = state.valeAlimentacao.find(v=>v.mes===mesAtual);
+    if(!entrada){
+      state.valeAlimentacao.push({ id: uid(), mes: mesAtual, valor: valorCalculado, auto:true });
+      saveData();
+    } else if(entrada.auto){
+      entrada.valor = valorCalculado;
+      saveData();
+    }
+  }
 }
 
 function renderVA(){
@@ -977,10 +1136,11 @@ function renderVA(){
   }
   const sorted = [...state.valeAlimentacao].sort((a,b)=> b.mes.localeCompare(a.mes));
   wrap.innerHTML = `<table>
-    <thead><tr><th>Mês</th><th>Valor</th><th></th></tr></thead>
+    <thead><tr><th>Mês</th><th>Valor</th><th>Origem</th><th></th></tr></thead>
     <tbody>${sorted.map(v=>`<tr>
       <td style="text-transform:capitalize;">${mesLabel(v.mes)}</td>
       <td class="mono">${fmtBRL(v.valor)}</td>
+      <td><span class="tag ${v.auto?'pendente':'pago'}">${v.auto?'Automático':'Manual'}</span></td>
       <td><div class="row-actions"><button onclick="removerVA('${v.id}')">excluir</button></div></td>
     </tr>`).join('')}</tbody>
   </table>`;
@@ -1002,8 +1162,8 @@ document.getElementById('addVaBtn').addEventListener('click', ()=>{
     onSubmit:(vals)=>{
       if(!vals.mes || !vals.valor){ showToast('Preencha todos os campos'); return false; }
       const existente = state.valeAlimentacao.find(v=>v.mes===vals.mes);
-      if(existente){ existente.valor = parseFloat(vals.valor); }
-      else { state.valeAlimentacao.push({ id: uid(), mes: vals.mes, valor: parseFloat(vals.valor) }); }
+      if(existente){ existente.valor = parseFloat(vals.valor); existente.auto = false; }
+      else { state.valeAlimentacao.push({ id: uid(), mes: vals.mes, valor: parseFloat(vals.valor), auto:false }); }
       saveData(); renderVA();
       showToast('Vale alimentação registrado');
       return true;
@@ -1050,6 +1210,19 @@ function getFeriados(year){
     { date:`${year}-12-25`, name:'Natal', tipo:'nacional' },
   ];
   return lista;
+}
+
+function calcularDiasUteis(year, month){
+  const feriadosAno = getFeriados(year);
+  const feriadosSet = new Set(feriadosAno.filter(f=> f.date.slice(0,7) === `${year}-${String(month+1).padStart(2,'0')}`).map(f=>f.date));
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  let count = 0;
+  for(let day=1; day<=daysInMonth; day++){
+    const d = new Date(year, month, day);
+    const dow = d.getDay();
+    if(dow!==0 && dow!==6 && !feriadosSet.has(toISO(d))) count++;
+  }
+  return count;
 }
 
 function renderCalendario(){
@@ -1111,7 +1284,9 @@ document.getElementById('calNext').addEventListener('click', ()=>{ calCursor.set
 document.getElementById('calToday').addEventListener('click', ()=>{ calCursor = new Date(); calCursor.setDate(1); renderCalendario(); });
 
 /* ===================== Inicialização ===================== */
+gerarContasRecorrentes();
 renderContas();
+renderRecorrencias();
 renderInvestimentos();
 renderDashboard();
 </script>
