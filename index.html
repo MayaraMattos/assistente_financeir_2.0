@@ -256,6 +256,23 @@
   .recorrencia-item .right{display:flex;align-items:center;gap:14px;}
   .recorrencia-item .amount{font-family:'Space Mono',monospace;font-weight:700;color:var(--gold);font-size:14px;}
 
+  /* Gráficos */
+  .charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:32px;}
+  @media (max-width:900px){.charts-grid{grid-template-columns:1fr;}}
+  .chart-card{background:var(--paper);border-radius:16px;padding:22px;box-shadow:var(--shadow);}
+  .chart-card h3{margin:0 0 18px;font-size:14.5px;font-weight:600;}
+  .donut-wrap{display:flex;align-items:center;gap:22px;flex-wrap:wrap;}
+  .donut-legend{flex:1;min-width:140px;display:flex;flex-direction:column;gap:9px;}
+  .donut-legend .item{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;}
+  .donut-legend .item .left{display:flex;align-items:center;gap:8px;color:var(--muted);}
+  .donut-legend .sw{width:9px;height:9px;border-radius:3px;flex-shrink:0;}
+  .donut-legend .item .val{font-family:'Space Mono',monospace;font-weight:700;color:var(--ink);}
+  .bar-chart{display:flex;align-items:flex-end;gap:10px;height:140px;padding-top:10px;}
+  .bar-chart .bar-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;}
+  .bar-chart .bar{width:100%;max-width:34px;border-radius:6px 6px 0 0;background:var(--gold);transition:height .4s;}
+  .bar-chart .bar-label{font-size:10.5px;color:var(--muted);margin-top:8px;text-transform:capitalize;}
+  .bar-chart .bar-value{font-size:10px;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:4px;}
+
   .toast{
     position:fixed;bottom:24px;right:24px;background:var(--ink);color:var(--parchment);
     padding:13px 20px;border-radius:10px;font-size:13px;box-shadow:0 8px 28px rgba(0,0,0,.22);
@@ -315,6 +332,17 @@
           <div class="label">Total investido</div>
           <div class="value mono" id="statInvestido">R$ 0,00</div>
           <div class="hint" id="statInvestidoHint">nenhum investimento ainda</div>
+        </div>
+      </div>
+
+      <div class="charts-grid">
+        <div class="chart-card">
+          <h3>Gastos por categoria (este mês)</h3>
+          <div id="chartCategorias"></div>
+        </div>
+        <div class="chart-card">
+          <h3>Total de contas por mês (últimos 6 meses)</h3>
+          <div id="chartMensal"></div>
         </div>
       </div>
 
@@ -479,6 +507,10 @@ function saveData(){
 
 let state = loadData();
 
+/* ---------- Categorias & paleta de gráficos ---------- */
+const CATEGORIAS = ['Moradia','Alimentação','Transporte','Lazer','Assinaturas','Cartão','Saúde','Educação','Outros'];
+const CHART_PALETTE = ['#B8893A','#3D7A56','#BC5A3C','#5C8AA6','#8B6BAA','#A3A14A','#6B7FA3','#A65C8A','#8C8A82'];
+
 /* ---------- Helpers ---------- */
 function fmtBRL(n){
   return (n||0).toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
@@ -591,10 +623,11 @@ document.getElementById('addContaBtn').addEventListener('click', ()=>{
       {key:'nome', label:'Nome da conta', type:'text', placeholder:'Ex: Aluguel'},
       {key:'valor', label:'Valor (R$)', type:'number', placeholder:'0,00', step:'0.01'},
       {key:'vencimento', label:'Vencimento', type:'date'},
+      {key:'categoria', label:'Categoria', type:'select', options: CATEGORIAS},
     ],
     onSubmit:(vals)=>{
       if(!vals.nome || !vals.valor || !vals.vencimento){ showToast('Preencha todos os campos'); return false; }
-      state.contas.push({ id: uid(), nome: vals.nome, valor: parseFloat(vals.valor), vencimento: vals.vencimento, pago:false });
+      state.contas.push({ id: uid(), nome: vals.nome, valor: parseFloat(vals.valor), vencimento: vals.vencimento, pago:false, categoria: vals.categoria || 'Outros' });
       saveData(); renderContas(); renderDashboard();
       showToast('Conta adicionada');
       return true;
@@ -624,7 +657,7 @@ function gerarContasRecorrentes(){
         const ultimoDia = new Date(cursor.getFullYear(), cursor.getMonth()+1, 0).getDate();
         const dia = Math.min(rec.diaVencimento, ultimoDia);
         const vencimento = `${mesRef}-${String(dia).padStart(2,'0')}`;
-        state.contas.push({ id: uid(), nome: rec.nome, valor: rec.valor, vencimento, pago:false, recorrenciaId: rec.id, mesRef });
+        state.contas.push({ id: uid(), nome: rec.nome, valor: rec.valor, vencimento, pago:false, recorrenciaId: rec.id, mesRef, categoria: rec.categoria || 'Outros' });
         mudou = true;
       }
       count++;
@@ -673,6 +706,7 @@ document.getElementById('addRecorrenciaBtn').addEventListener('click', ()=>{
       {key:'diaVencimento', label:'Dia do vencimento', type:'number', placeholder:'10'},
       {key:'mesInicio', label:'A partir de qual mês', type:'month'},
       {key:'duracaoMeses', label:'Duração em meses (vazio = indefinida)', type:'number', placeholder:'Ex: 6'},
+      {key:'categoria', label:'Categoria', type:'select', options: CATEGORIAS},
     ],
     onSubmit:(vals)=>{
       if(!vals.nome || !vals.valor || !vals.diaVencimento || !vals.mesInicio){ showToast('Preencha nome, valor, dia e mês de início'); return false; }
@@ -685,6 +719,7 @@ document.getElementById('addRecorrenciaBtn').addEventListener('click', ()=>{
         diaVencimento: dia,
         mesInicio: vals.mesInicio || mesAtualStr,
         duracaoMeses: vals.duracaoMeses ? parseInt(vals.duracaoMeses,10) : null,
+        categoria: vals.categoria || 'Outros',
       };
       state.recorrencias.push(rec);
       saveData();
@@ -978,6 +1013,87 @@ function renderDashboard(){
       return `<div class="investment-card"><div class="top"><div><div class="name">${escapeHtml(inv.nome)}</div><div class="type">${escapeHtml(inv.tipo||'Investimento')}</div></div><div class="amount">${fmtBRL(total)}</div></div></div>`;
     }).join('');
   }
+
+  renderChartCategorias();
+  renderChartMensal();
+}
+
+/* ---------- Gráfico donut (SVG) ---------- */
+function buildDonut(items, size=150){
+  // items: [{label, value, color}]
+  const total = items.reduce((s,i)=>s+i.value,0);
+  if(total<=0) return null;
+  const r = size/2 - 14, c = size/2, circ = 2*Math.PI*r;
+  let acc = 0;
+  const circles = items.map(it=>{
+    const pct = it.value/total;
+    const dash = pct*circ;
+    const offset = circ - acc*circ;
+    acc += pct;
+    return `<circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="${it.color}" stroke-width="20"
+      stroke-dasharray="${dash} ${circ-dash}" stroke-dashoffset="${offset}" transform="rotate(-90 ${c} ${c})" />`;
+  }).join('');
+  return `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}">${circles}
+    <circle cx="${c}" cy="${c}" r="${r-13}" fill="var(--paper)" />
+  </svg>`;
+}
+
+function renderChartCategorias(){
+  const el = document.getElementById('chartCategorias');
+  const hoje = new Date();
+  const mesAtual = hoje.getFullYear()+'-'+String(hoje.getMonth()+1).padStart(2,'0');
+  const doMes = state.contas.filter(c=> c.vencimento.slice(0,7)===mesAtual);
+
+  if(doMes.length===0){
+    el.innerHTML = `<div class="empty">Nenhuma conta cadastrada para este mês.</div>`;
+    return;
+  }
+
+  const porCategoria = {};
+  doMes.forEach(c=>{
+    const cat = c.categoria || 'Outros';
+    porCategoria[cat] = (porCategoria[cat]||0) + c.valor;
+  });
+  const items = Object.entries(porCategoria)
+    .sort((a,b)=>b[1]-a[1])
+    .map(([label,value],i)=>({ label, value, color: CHART_PALETTE[i % CHART_PALETTE.length] }));
+
+  const total = items.reduce((s,i)=>s+i.value,0);
+  const svg = buildDonut(items);
+  const legend = items.map(it=>`
+    <div class="item">
+      <span class="left"><span class="sw" style="background:${it.color}"></span>${escapeHtml(it.label)}</span>
+      <span class="val">${((it.value/total)*100).toFixed(0)}%</span>
+    </div>`).join('');
+
+  el.innerHTML = `<div class="donut-wrap">${svg}<div class="donut-legend">${legend}</div></div>`;
+}
+
+function renderChartMensal(){
+  const el = document.getElementById('chartMensal');
+  const hoje = new Date();
+  const meses = [];
+  for(let i=5;i>=0;i--){
+    const d = new Date(hoje.getFullYear(), hoje.getMonth()-i, 1);
+    meses.push({ key: d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'), label: d.toLocaleDateString('pt-BR',{month:'short'}).replace('.','') });
+  }
+  const totais = meses.map(m=> ({
+    ...m,
+    total: state.contas.filter(c=>c.vencimento.slice(0,7)===m.key).reduce((s,c)=>s+c.valor,0)
+  }));
+  const max = Math.max(...totais.map(t=>t.total), 1);
+
+  if(totais.every(t=>t.total===0)){
+    el.innerHTML = `<div class="empty">Sem contas suficientes para montar o gráfico.</div>`;
+    return;
+  }
+
+  el.innerHTML = `<div class="bar-chart">${totais.map(t=>`
+    <div class="bar-col">
+      <span class="bar-value">${t.total>0?fmtBRL(t.total).replace('R$',''):''}</span>
+      <div class="bar" style="height:${Math.max((t.total/max)*100,2)}%"></div>
+      <span class="bar-label">${t.label}</span>
+    </div>`).join('')}</div>`;
 }
 
 /* ===================== Modal genérico ===================== */
