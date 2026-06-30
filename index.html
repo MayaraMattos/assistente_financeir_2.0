@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Livro — Assistente Financeiro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1B1B2A;
+    --parchment:#FAFAF7;
+    --paper:#FFFFFF;
+    --gold:#B8893A;
+    --gold-soft:#F5EBD8;
+    --green:#3D7A56;
+    --green-soft:#E3F0E7;
+    --terracotta:#BC5A3C;
+    --terracotta-soft:#FAE6DD;
+    --line:#EBE9E3;
+    --muted:#8C8A82;
+    --shadow: 0 1px 2px rgba(27,27,42,0.04), 0 4px 16px rgba(27,27,42,0.03);
+    --shadow-sm: 0 1px 2px rgba(27,27,42,0.05);
+  }
+  [data-theme="dark"]{
+    --ink:#F0EFEA;
+    --parchment:#121116;
+    --paper:#1A1922;
+    --gold:#D9AE63;
+    --gold-soft:#2E2718;
+    --green:#74B98A;
+    --green-soft:#1C2C20;
+    --terracotta:#E08964;
+    --terracotta-soft:#2E1E17;
+    --line:#2A2933;
+    --muted:#8E8C95;
+    --shadow: 0 1px 2px rgba(0,0,0,0.2), 0 4px 16px rgba(0,0,0,0.18);
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--parchment);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    transition:background .3s, color .3s;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,.serif{font-family:'Fraunces',serif;letter-spacing:-.01em;}
+  .mono{font-family:'Space Mono',monospace;}
+
+  .app{display:grid;grid-template-columns:232px 1fr;min-height:100vh;}
+  @media (max-width:780px){.app{grid-template-columns:1fr;}}
+
+  /* Sidebar */
+  .sidebar{
+    background:var(--paper);
+    border-right:1px solid var(--line);
+    color:var(--ink);
+    padding:32px 18px;
+    display:flex;flex-direction:column;
+    position:sticky;top:0;height:100vh;
+  }
+  @media (max-width:780px){.sidebar{position:relative;height:auto;flex-direction:row;align-items:center;justify-content:space-between;padding:14px 18px;border-right:none;border-bottom:1px solid var(--line);}}
+  .brand{font-size:21px;font-weight:600;letter-spacing:-.01em;display:flex;align-items:baseline;gap:8px;padding:0 8px;}
+  .brand .dot{width:7px;height:7px;border-radius:50%;background:var(--gold);display:inline-block;}
+  .tagline{font-size:11px;color:var(--muted);margin-top:3px;letter-spacing:.06em;text-transform:uppercase;padding:0 8px;}
+  nav{margin-top:36px;display:flex;flex-direction:column;gap:2px;}
+  @media (max-width:780px){nav{margin-top:0;flex-direction:row;}.tagline,.brand-block{display:none;}}
+  nav button{
+    all:unset;cursor:pointer;
+    padding:10px 12px;border-radius:9px;
+    font-size:13.5px;font-weight:500;color:var(--muted);
+    display:flex;align-items:center;gap:10px;
+    transition:background .15s, color .15s;
+  }
+  nav button .num{font-family:'Space Mono',monospace;font-size:10.5px;opacity:.55;}
+  nav button:hover{background:var(--parchment);color:var(--ink);}
+  nav button.active{background:var(--gold-soft);color:var(--gold);}
+  .sidebar-foot{margin-top:auto;display:flex;flex-direction:column;gap:6px;padding-top:18px;border-top:1px solid var(--line);}
+  @media (max-width:780px){.sidebar-foot{margin-top:0;flex-direction:row;border-top:none;padding-top:0;}}
+  .icon-btn{
+    all:unset;cursor:pointer;
+    width:34px;height:34px;border-radius:9px;
+    display:flex;align-items:center;justify-content:center;
+    color:var(--muted);
+    font-size:15px;
+    transition:background .15s, color .15s;
+  }
+  .icon-btn:hover{background:var(--parchment);color:var(--ink);}
+
+  /* Main */
+  main{padding:44px 48px;max-width:1040px;}
+  @media (max-width:780px){main{padding:24px 20px;}}
+  .page-head{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:24px;margin-bottom:32px;border-bottom:1px solid var(--line);}
+  .page-head h1{font-size:28px;font-weight:600;margin:0;letter-spacing:-.02em;}
+  .page-head .sub{color:var(--muted);font-size:13.5px;margin-top:5px;}
+  .date-badge{font-family:'Space Mono',monospace;font-size:11.5px;color:var(--muted);background:var(--paper);box-shadow:var(--shadow-sm);padding:7px 12px;border-radius:20px;}
+
+  .hidden{display:none !important;}
+
+  /* Cards */
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:36px;}
+  @media (max-width:780px){.grid3{grid-template-columns:1fr;}}
+  .stat-card{
+    background:var(--paper);border-radius:16px;
+    padding:22px 24px;box-shadow:var(--shadow);
+  }
+  .stat-card .label{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:500;}
+  .stat-card .value{font-family:'Fraunces',serif;font-size:28px;font-weight:600;margin-top:9px;letter-spacing:-.01em;}
+  .stat-card.gold .value{color:var(--gold);}
+  .stat-card.terracotta .value{color:var(--terracotta);}
+  .stat-card.green .value{color:var(--green);}
+  .stat-card .hint{font-size:12px;color:var(--muted);margin-top:7px;}
+
+  .section-title{display:flex;justify-content:space-between;align-items:center;margin:40px 0 16px;}
+  .section-title h2{font-size:16px;margin:0;font-weight:600;}
+  .btn{
+    all:unset;cursor:pointer;
+    background:var(--ink);color:var(--parchment);
+    padding:10px 18px;border-radius:10px;font-size:13px;font-weight:600;
+    display:inline-flex;align-items:center;gap:6px;
+    transition:opacity .15s, transform .1s;
+  }
+  .btn:hover{opacity:.85;}
+  .btn:active{transform:scale(.98);}
+  .btn.ghost{background:var(--paper);color:var(--ink);box-shadow:var(--shadow-sm);}
+  .btn.danger{background:var(--terracotta);color:#fff;}
+
+  table{width:100%;border-collapse:collapse;background:var(--paper);border-radius:16px;overflow:hidden;box-shadow:var(--shadow);}
+  thead th{
+    text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;
+    color:var(--muted);font-weight:600;padding:14px 18px;border-bottom:1px solid var(--line);
+  }
+  tbody td{padding:15px 18px;font-size:13.5px;border-bottom:1px solid var(--line);}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr{transition:background .12s;}
+  tbody tr:hover{background:var(--parchment);}
+  .tag{font-size:10.5px;padding:4px 10px;border-radius:20px;font-weight:600;letter-spacing:.01em;}
+  .tag.pago{background:var(--green-soft);color:var(--green);}
+  .tag.pendente{background:var(--gold-soft);color:var(--gold);}
+  .tag.atrasado{background:var(--terracotta-soft);color:var(--terracotta);}
+  .row-actions{display:flex;gap:10px;}
+  .row-actions button{
+    all:unset;cursor:pointer;font-size:12px;color:var(--muted);
+  }
+  .row-actions button:hover{color:var(--ink);text-decoration:underline;}
+
+  .empty{
+    text-align:center;padding:56px 20px;color:var(--muted);
+    background:var(--paper);border:1px dashed var(--line);border-radius:16px;font-size:13.5px;
+  }
+  .empty .serif{font-size:17px;color:var(--ink);display:block;margin-bottom:6px;font-weight:600;}
+
+  /* Modal */
+  .overlay{
+    position:fixed;inset:0;background:rgba(27,27,42,.4);backdrop-filter:blur(2px);
+    display:flex;align-items:center;justify-content:center;z-index:50;padding:20px;
+  }
+  .modal{
+    background:var(--paper);border-radius:18px;padding:30px;width:100%;max-width:420px;
+    box-shadow:0 12px 40px rgba(0,0,0,.18);
+  }
+  .modal h3{margin:0 0 20px;font-size:19px;font-weight:600;}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:11.5px;color:var(--muted);margin-bottom:7px;text-transform:uppercase;letter-spacing:.04em;font-weight:500;}
+  .field input,.field select{
+    width:100%;padding:11px 13px;border-radius:10px;border:1px solid var(--line);
+    background:var(--parchment);color:var(--ink);font-size:14px;font-family:'Inter',sans-serif;
+    transition:border-color .15s;
+  }
+  .field input:focus,.field select:focus{outline:none;border-color:var(--gold);}
+  .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:24px;}
+
+  .investment-card{
+    background:var(--paper);border-radius:16px;padding:22px;margin-bottom:14px;box-shadow:var(--shadow);
+  }
+  .investment-card .top{display:flex;justify-content:space-between;align-items:flex-start;}
+  .investment-card .name{font-family:'Fraunces',serif;font-size:17px;font-weight:600;}
+  .investment-card .type{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:3px;}
+  .investment-card .amount{font-family:'Space Mono',monospace;font-size:19px;color:var(--green);font-weight:700;}
+  .investment-card .meta{display:flex;gap:18px;margin-top:14px;font-size:12px;color:var(--muted);}
+  .investment-card .actions{margin-top:16px;display:flex;gap:10px;}
+
+  .goal-block{margin-top:18px;padding-top:16px;border-top:1px solid var(--line);}
+  .goal-block .goal-head{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:9px;}
+  .goal-head .pct{font-family:'Space Mono',monospace;color:var(--ink);font-weight:700;}
+  .progress-track{width:100%;height:7px;border-radius:6px;background:var(--gold-soft);overflow:hidden;}
+  .progress-fill{height:100%;border-radius:6px;background:var(--green);transition:width .4s;}
+  .progress-fill.behind{background:var(--terracotta);}
+  .goal-stats{display:flex;flex-wrap:wrap;gap:18px;margin-top:11px;font-size:12px;color:var(--muted);}
+  .goal-stats b{color:var(--ink);font-family:'Space Mono',monospace;font-weight:700;}
+  .goal-msg{margin-top:10px;font-size:12.5px;padding:10px 12px;border-radius:10px;background:var(--green-soft);color:var(--green);line-height:1.5;}
+  .goal-msg.warn{background:var(--terracotta-soft);color:var(--terracotta);}
+  .no-goal{margin-top:14px;}
+  .no-goal button{all:unset;cursor:pointer;font-size:12px;color:var(--muted);}
+  .no-goal button:hover{color:var(--ink);text-decoration:underline;}
+
+  .study-modal .modal{max-width:560px;max-height:85vh;overflow-y:auto;}
+  .study-horizon{display:flex;gap:10px;align-items:center;margin-bottom:18px;padding:14px 16px;background:var(--parchment);border-radius:12px;}
+  .study-horizon .badge{font-family:'Space Mono',monospace;font-size:10.5px;background:var(--ink);color:var(--parchment);padding:5px 11px;border-radius:20px;white-space:nowrap;}
+  .study-horizon p{margin:0;font-size:12.5px;color:var(--muted);line-height:1.5;}
+  .alloc-item{border-radius:12px;padding:16px 18px;margin-bottom:12px;background:var(--paper);box-shadow:var(--shadow-sm);}
+  .alloc-item .head{display:flex;justify-content:space-between;align-items:center;}
+  .alloc-item .head .name{font-family:'Fraunces',serif;font-weight:600;font-size:14.5px;}
+  .alloc-item .head .weight{font-family:'Space Mono',monospace;font-size:13px;color:var(--gold);font-weight:700;}
+  .alloc-item .why{font-size:12.5px;color:var(--muted);margin-top:7px;line-height:1.55;}
+  .alloc-item .alloc-bar{height:6px;border-radius:4px;background:var(--gold-soft);margin-top:11px;overflow:hidden;}
+  .alloc-item .alloc-bar div{height:100%;background:var(--green);}
+  .study-disclaimer{font-size:11.5px;color:var(--muted);background:var(--parchment);border-radius:10px;padding:12px 14px;margin-top:18px;line-height:1.55;}
+
+  /* Renda */
+  .card{background:var(--paper);border-radius:16px;padding:24px;margin-bottom:18px;box-shadow:var(--shadow);}
+  .card h3{margin:0 0 5px;font-size:15.5px;font-weight:600;}
+  .card .desc{font-size:12.5px;color:var(--muted);margin-bottom:20px;line-height:1.5;}
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  @media (max-width:780px){.form-row{grid-template-columns:1fr;}}
+  .result-row{display:flex;gap:14px;margin-top:20px;flex-wrap:wrap;}
+  .result-pill{flex:1;min-width:160px;background:var(--parchment);border-radius:12px;padding:16px 18px;}
+  .result-pill .label{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:500;}
+  .result-pill .value{font-family:'Space Mono',monospace;font-size:18px;font-weight:700;margin-top:7px;}
+  .result-pill.gold .value{color:var(--gold);}
+  .result-pill.green .value{color:var(--green);}
+
+  /* Calendário */
+  .cal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}
+  .cal-header .cal-title{font-family:'Fraunces',serif;font-size:19px;font-weight:600;text-transform:capitalize;}
+  .cal-nav{display:flex;gap:8px;}
+  .cal-nav button{all:unset;cursor:pointer;width:32px;height:32px;border-radius:9px;background:var(--parchment);display:flex;align-items:center;justify-content:center;font-size:14px;transition:background .15s;}
+  .cal-nav button:hover{background:var(--gold-soft);}
+  .cal-stats{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;}
+  .calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
+  .cal-dow{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);text-align:center;padding-bottom:8px;font-weight:600;}
+  .cal-day{
+    aspect-ratio:1/1;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    font-size:12.5px;background:var(--parchment);position:relative;font-weight:500;
+  }
+  .cal-day.empty{background:transparent;}
+  .cal-day.weekend{color:var(--muted);}
+  .cal-day.holiday-nacional{background:var(--terracotta-soft);color:var(--terracotta);font-weight:700;}
+  .cal-day.holiday-municipal{background:var(--gold-soft);color:var(--gold);font-weight:700;}
+  .cal-day.today{box-shadow:inset 0 0 0 2px var(--ink);}
+  .cal-day .dot{width:4px;height:4px;border-radius:50%;background:currentColor;margin-top:2px;}
+  .cal-legend{display:flex;gap:18px;margin-top:20px;flex-wrap:wrap;font-size:12px;color:var(--muted);}
+  .cal-legend .sw{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px;}
+  .holiday-list{margin-top:24px;}
+  .holiday-list .hl-item{display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--line);font-size:13px;}
+  .holiday-list .hl-item:last-child{border-bottom:none;}
+  .holiday-list .hl-tag{font-size:10.5px;padding:3px 9px;border-radius:20px;font-weight:600;}
+  .holiday-list .hl-tag.nacional{background:var(--terracotta-soft);color:var(--terracotta);}
+  .holiday-list .hl-tag.municipal{background:var(--gold-soft);color:var(--gold);}
+
+  .toast{
+    position:fixed;bottom:24px;right:24px;background:var(--ink);color:var(--parchment);
+    padding:13px 20px;border-radius:10px;font-size:13px;box-shadow:0 8px 28px rgba(0,0,0,.22);
+    z-index:100;opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none;
+  }
+  .toast.show{opacity:1;transform:translateY(0);}
+
+  .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);}
+  button:focus-visible, .icon-btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px;}
+</style>
+</head>
+<body data-theme="light">
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand-block">
+      <div class="brand"><span class="dot"></span>Livro</div>
+      <div class="tagline">Suas finanças, por escrito</div>
+    </div>
+    <nav>
+      <button class="nav-btn active" data-page="dashboard"><span class="num">01</span> Dashboard</button>
+      <button class="nav-btn" data-page="contas"><span class="num">02</span> Contas</button>
+      <button class="nav-btn" data-page="investimentos"><span class="num">03</span> Investimentos</button>
+      <button class="nav-btn" data-page="renda"><span class="num">04</span> Renda</button>
+      <button class="nav-btn" data-page="calendario"><span class="num">05</span> Calendário</button>
+    </nav>
+    <div class="sidebar-foot">
+      <button class="icon-btn" id="themeToggle" title="Alternar tema" aria-label="Alternar tema">◐</button>
+      <button class="icon-btn" id="exportBtn" title="Exportar dados (JSON)" aria-label="Exportar dados">↓</button>
+      <button class="icon-btn" id="importBtn" title="Importar dados (JSON)" aria-label="Importar dados">↑</button>
+      <input type="file" id="importFile" accept="application/json" class="visually-hidden">
+    </div>
+  </aside>
+
+  <main>
+    <!-- DASHBOARD -->
+    <section id="page-dashboard">
+      <div class="page-head">
+        <div>
+          <h1>Dashboard</h1>
+          <div class="sub">Resumo geral do seu mês</div>
+        </div>
+        <div class="date-badge" id="todayBadge"></div>
+      </div>
+
+      <div class="grid3">
+        <div class="stat-card terracotta">
+          <div class="label">A pagar este mês</div>
+          <div class="value mono" id="statAPagar">R$ 0,00</div>
+          <div class="hint" id="statAPagarHint">nenhuma conta pendente</div>
+        </div>
+        <div class="stat-card gold">
+          <div class="label">Vencendo em 7 dias</div>
+          <div class="value mono" id="statVencendo">R$ 0,00</div>
+          <div class="hint" id="statVencendoHint">nenhuma conta próxima</div>
+        </div>
+        <div class="stat-card green">
+          <div class="label">Total investido</div>
+          <div class="value mono" id="statInvestido">R$ 0,00</div>
+          <div class="hint" id="statInvestidoHint">nenhum investimento ainda</div>
+        </div>
+      </div>
+
+      <div class="section-title"><h2>Próximos vencimentos</h2></div>
+      <div id="dashUpcoming"></div>
+
+      <div class="section-title"><h2>Investimentos recentes</h2></div>
+      <div id="dashInvest"></div>
+    </section>
+
+    <!-- CONTAS -->
+    <section id="page-contas" class="hidden">
+      <div class="page-head">
+        <div>
+          <h1>Contas</h1>
+          <div class="sub">Contas a pagar e seus vencimentos</div>
+        </div>
+        <button class="btn" id="addContaBtn">+ Nova conta</button>
+      </div>
+      <div id="contasWrap"></div>
+    </section>
+
+    <!-- INVESTIMENTOS -->
+    <section id="page-investimentos" class="hidden">
+      <div class="page-head">
+        <div>
+          <h1>Investimentos</h1>
+          <div class="sub">Seus aportes e posições</div>
+        </div>
+        <button class="btn" id="addInvestBtn">+ Novo investimento</button>
+      </div>
+      <div id="investWrap"></div>
+    </section>
+
+    <!-- RENDA -->
+    <section id="page-renda" class="hidden">
+      <div class="page-head">
+        <div>
+          <h1>Renda</h1>
+          <div class="sub">Salário, adiantamento e vale alimentação</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Salário e adiantamento</h3>
+        <div class="desc">Informe seu salário e o percentual de adiantamento (vale) para calcular automaticamente os valores das duas parcelas.</div>
+        <div class="form-row">
+          <div class="field">
+            <label>Salário bruto/líquido (R$)</label>
+            <input type="number" step="0.01" id="salarioValor" placeholder="0,00">
+          </div>
+          <div class="field">
+            <label>Percentual de adiantamento (%)</label>
+            <input type="number" step="1" min="0" max="100" id="salarioPct" placeholder="40">
+          </div>
+        </div>
+        <button class="btn" id="salvarSalarioBtn">Salvar</button>
+        <div class="result-row">
+          <div class="result-pill gold">
+            <div class="label">Adiantamento</div>
+            <div class="value mono" id="resAdiantamento">R$ 0,00</div>
+          </div>
+          <div class="result-pill green">
+            <div class="label">Saldo (restante)</div>
+            <div class="value mono" id="resSaldo">R$ 0,00</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <h3 style="margin:0;">Vale alimentação</h3>
+          <button class="btn ghost" id="addVaBtn">+ Registrar VA do mês</button>
+        </div>
+        <div class="desc">Acompanhe o valor de vale alimentação recebido em cada mês.</div>
+        <div id="vaWrap"></div>
+      </div>
+    </section>
+
+    <!-- CALENDÁRIO -->
+    <section id="page-calendario" class="hidden">
+      <div class="page-head">
+        <div>
+          <h1>Calendário</h1>
+          <div class="sub">Dias úteis e feriados — nacionais e de Campo Grande/MS</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="cal-header">
+          <div class="cal-title" id="calTitle"></div>
+          <div class="cal-nav">
+            <button id="calPrev" aria-label="Mês anterior">‹</button>
+            <button id="calToday" aria-label="Mês atual" style="width:auto;padding:0 10px;font-size:11px;">hoje</button>
+            <button id="calNext" aria-label="Próximo mês">›</button>
+          </div>
+        </div>
+        <div class="cal-stats">
+          <div class="result-pill green" style="flex:none;min-width:140px;">
+            <div class="label">Dias úteis no mês</div>
+            <div class="value mono" id="calUteis">0</div>
+          </div>
+          <div class="result-pill gold" style="flex:none;min-width:140px;">
+            <div class="label">Feriados no mês</div>
+            <div class="value mono" id="calFeriadosCount">0</div>
+          </div>
+        </div>
+        <div class="calendar-grid" id="calGrid"></div>
+        <div class="cal-legend">
+          <span><span class="sw" style="background:var(--parchment);border:1px solid var(--line);"></span>Fim de semana</span>
+          <span><span class="sw" style="background:var(--terracotta-soft);"></span>Feriado nacional</span>
+          <span><span class="sw" style="background:var(--gold-soft);"></span>Feriado de Campo Grande/MS</span>
+        </div>
+        <div class="holiday-list" id="calHolidayList"></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------- Estado & persistência ---------- */
+const STORAGE_KEY = 'livro_financas_v1';
+
+function loadData(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      const d = JSON.parse(raw);
+      return {
+        contas: d.contas || [],
+        investimentos: d.investimentos || [],
+        salario: d.salario || { valor:0, percentual:40 },
+        valeAlimentacao: d.valeAlimentacao || []
+      };
+    }
+  }catch(e){ console.error('Erro ao carregar dados', e); }
+  return { contas: [], investimentos: [], salario:{ valor:0, percentual:40 }, valeAlimentacao: [] };
+}
+function saveData(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+let state = loadData();
+
+/* ---------- Helpers ---------- */
+function fmtBRL(n){
+  return (n||0).toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
+}
+function fmtDate(d){
+  if(!d) return '—';
+  const [y,m,day] = d.split('-');
+  return `${day}/${m}/${y}`;
+}
+function daysUntil(d){
+  const today = new Date(); today.setHours(0,0,0,0);
+  const target = new Date(d+'T00:00:00');
+  return Math.round((target-today)/86400000);
+}
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+/* ---------- Navegação ---------- */
+const pages = ['dashboard','contas','investimentos','renda','calendario'];
+document.querySelectorAll('.nav-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    pages.forEach(p=>document.getElementById('page-'+p).classList.toggle('hidden', p!==btn.dataset.page));
+    if(btn.dataset.page==='dashboard') renderDashboard();
+    if(btn.dataset.page==='renda') renderRenda();
+    if(btn.dataset.page==='calendario') renderCalendario();
+  });
+});
+
+/* ---------- Tema ---------- */
+const themeToggle = document.getElementById('themeToggle');
+function applyTheme(t){
+  document.body.setAttribute('data-theme', t);
+  localStorage.setItem('livro_theme', t);
+  themeToggle.textContent = t==='dark' ? '◑' : '◐';
+}
+applyTheme(localStorage.getItem('livro_theme') || 'light');
+themeToggle.addEventListener('click', ()=>{
+  applyTheme(document.body.getAttribute('data-theme')==='dark' ? 'light' : 'dark');
+});
+
+/* ---------- Data de hoje ---------- */
+document.getElementById('todayBadge').textContent = new Date().toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+
+/* ===================== CONTAS ===================== */
+function statusConta(c){
+  if(c.pago) return 'pago';
+  const d = daysUntil(c.vencimento);
+  if(d < 0) return 'atrasado';
+  return 'pendente';
+}
+function statusLabel(s){
+  return { pago:'Pago', pendente:'Pendente', atrasado:'Atrasado' }[s];
+}
+
+function renderContas(){
+  const wrap = document.getElementById('contasWrap');
+  if(state.contas.length === 0){
+    wrap.innerHTML = `<div class="empty"><span class="serif">Nenhuma conta cadastrada</span>Adicione suas contas fixas e parceladas para acompanhar os vencimentos.</div>`;
+    return;
+  }
+  const sorted = [...state.contas].sort((a,b)=> a.vencimento.localeCompare(b.vencimento));
+  let rows = sorted.map(c=>{
+    const s = statusConta(c);
+    return `<tr>
+      <td>${escapeHtml(c.nome)}</td>
+      <td class="mono">${fmtBRL(c.valor)}</td>
+      <td class="mono">${fmtDate(c.vencimento)}</td>
+      <td><span class="tag ${s}">${statusLabel(s)}</span></td>
+      <td>
+        <div class="row-actions">
+          ${!c.pago ? `<button onclick="marcarPago('${c.id}')">marcar pago</button>` : `<button onclick="marcarPendente('${c.id}')">reabrir</button>`}
+          <button onclick="removerConta('${c.id}')">excluir</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+  wrap.innerHTML = `<table>
+    <thead><tr><th>Conta</th><th>Valor</th><th>Vencimento</th><th>Status</th><th></th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+function marcarPago(id){
+  const c = state.contas.find(x=>x.id===id);
+  if(c){ c.pago = true; saveData(); renderContas(); renderDashboard(); showToast('Conta marcada como paga'); }
+}
+function marcarPendente(id){
+  const c = state.contas.find(x=>x.id===id);
+  if(c){ c.pago = false; saveData(); renderContas(); renderDashboard(); showToast('Conta reaberta'); }
+}
+function removerConta(id){
+  if(!confirm('Excluir esta conta?')) return;
+  state.contas = state.contas.filter(x=>x.id!==id);
+  saveData(); renderContas(); renderDashboard();
+  showToast('Conta excluída');
+}
+
+document.getElementById('addContaBtn').addEventListener('click', ()=>{
+  openModal({
+    title:'Nova conta',
+    fields:[
+      {key:'nome', label:'Nome da conta', type:'text', placeholder:'Ex: Aluguel'},
+      {key:'valor', label:'Valor (R$)', type:'number', placeholder:'0,00', step:'0.01'},
+      {key:'vencimento', label:'Vencimento', type:'date'},
+    ],
+    onSubmit:(vals)=>{
+      if(!vals.nome || !vals.valor || !vals.vencimento){ showToast('Preencha todos os campos'); return false; }
+      state.contas.push({ id: uid(), nome: vals.nome, valor: parseFloat(vals.valor), vencimento: vals.vencimento, pago:false });
+      saveData(); renderContas(); renderDashboard();
+      showToast('Conta adicionada');
+      return true;
+    }
+  });
+});
+
+/* ===================== INVESTIMENTOS ===================== */
+function investTotal(inv){
+  return inv.valorInicial + (inv.aportes||[]).reduce((s,a)=>s+a.valor,0);
+}
+
+function analisarMeta(inv){
+  const total = investTotal(inv);
+  const pct = Math.min(100, (total/inv.metaValor)*100);
+  const restante = Math.max(0, inv.metaValor - total);
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const alvo = new Date(inv.metaData+'T00:00:00');
+  const diasRestantes = Math.round((alvo-hoje)/86400000);
+  const mesesRestantes = Math.max(diasRestantes/30, 0);
+
+  // ritmo médio de aportes (R$/mês) com base no histórico
+  const aportes = inv.aportes||[];
+  let ritmoMensal = 0;
+  if(aportes.length>0){
+    const datas = aportes.map(a=>new Date(a.data+'T00:00:00').getTime());
+    const inicio = Math.min(new Date(inv.dataInicio+'T00:00:00').getTime(), ...datas);
+    const mesesDecorridos = Math.max((Date.now()-inicio)/(1000*60*60*24*30), 1);
+    const somaAportes = aportes.reduce((s,a)=>s+a.valor,0);
+    ritmoMensal = somaAportes/mesesDecorridos;
+  }
+
+  const aporteMensalNecessario = mesesRestantes > 0 ? restante/mesesRestantes : restante;
+  const atingida = total >= inv.metaValor;
+  const prazoVencido = diasRestantes < 0 && !atingida;
+  const noRitmo = ritmoMensal >= aporteMensalNecessario*0.95;
+
+  return { total, pct, restante, diasRestantes, mesesRestantes, ritmoMensal, aporteMensalNecessario, atingida, prazoVencido, noRitmo };
+}
+
+function renderInvestimentos(){
+  const wrap = document.getElementById('investWrap');
+  if(state.investimentos.length===0){
+    wrap.innerHTML = `<div class="empty"><span class="serif">Nenhum investimento cadastrado</span>Adicione suas posições para acompanhar aportes ao longo do tempo.</div>`;
+    return;
+  }
+  wrap.innerHTML = state.investimentos.map(inv=>{
+    const total = investTotal(inv);
+    let goalHtml = '';
+    if(inv.metaValor && inv.metaData){
+      const a = analisarMeta(inv);
+      let msg, msgClass = '';
+      if(a.atingida){
+        msg = `Meta atingida! Você chegou a ${fmtBRL(a.total)}.`;
+      } else if(a.prazoVencido){
+        msg = `O prazo da meta já passou e faltam ${fmtBRL(a.restante)}. Considere ajustar a data ou reforçar os aportes.`;
+        msgClass = 'warn';
+      } else if(a.noRitmo){
+        msg = `No ritmo certo: seu aporte médio (${fmtBRL(a.ritmoMensal)}/mês) cobre o necessário para a meta.`;
+      } else {
+        msg = `Para chegar na meta até ${fmtDate(inv.metaData)}, aporte cerca de ${fmtBRL(a.aporteMensalNecessario)}/mês (atual: ${fmtBRL(a.ritmoMensal)}/mês).`;
+        msgClass = 'warn';
+      }
+      goalHtml = `<div class="goal-block">
+        <div class="goal-head"><span>Meta: ${fmtBRL(inv.metaValor)} até ${fmtDate(inv.metaData)}</span><span class="pct">${a.pct.toFixed(0)}%</span></div>
+        <div class="progress-track"><div class="progress-fill ${a.noRitmo||a.atingida?'':'behind'}" style="width:${a.pct}%"></div></div>
+        <div class="goal-stats">
+          <span>Faltam <b>${fmtBRL(a.restante)}</b></span>
+          <span>Prazo: <b>${a.diasRestantes>=0 ? a.diasRestantes+' dias' : 'vencido'}</b></span>
+          <span>Aporte médio: <b>${fmtBRL(a.ritmoMensal)}/mês</b></span>
+        </div>
+        <div class="goal-msg ${msgClass}">${msg}</div>
+        <div class="no-goal"><button onclick="estudoAlocacao('${inv.id}')">ver estudo de alocação</button> · <button onclick="editarMeta('${inv.id}')">editar meta</button> · <button onclick="removerMeta('${inv.id}')">remover meta</button></div>
+      </div>`;
+    } else {
+      goalHtml = `<div class="no-goal"><button onclick="editarMeta('${inv.id}')">+ definir meta para este investimento</button></div>`;
+    }
+    return `<div class="investment-card">
+      <div class="top">
+        <div>
+          <div class="name">${escapeHtml(inv.nome)}</div>
+          <div class="type">${escapeHtml(inv.tipo||'Investimento')}</div>
+        </div>
+        <div class="amount">${fmtBRL(total)}</div>
+      </div>
+      <div class="meta">
+        <span>Início: ${fmtDate(inv.dataInicio)}</span>
+        <span>${(inv.aportes||[]).length} aporte(s)</span>
+      </div>
+      <div class="actions">
+        <button class="btn ghost" onclick="abrirAporte('${inv.id}')">+ Aporte</button>
+        <button class="btn danger" onclick="removerInvest('${inv.id}')">Excluir</button>
+      </div>
+      ${goalHtml}
+    </div>`;
+  }).join('');
+}
+
+function editarMeta(id){
+  const inv = state.investimentos.find(x=>x.id===id);
+  openModal({
+    title:'Definir meta',
+    fields:[
+      {key:'metaValor', label:'Valor da meta (R$)', type:'number', placeholder:'0,00', step:'0.01'},
+      {key:'metaData', label:'Data alvo', type:'date'},
+    ],
+    onSubmit:(vals)=>{
+      if(!vals.metaValor || !vals.metaData){ showToast('Preencha todos os campos'); return false; }
+      inv.metaValor = parseFloat(vals.metaValor);
+      inv.metaData = vals.metaData;
+      saveData(); renderInvestimentos(); renderDashboard();
+      showToast('Meta definida');
+      return true;
+    }
+  });
+}
+function removerMeta(id){
+  const inv = state.investimentos.find(x=>x.id===id);
+  delete inv.metaValor; delete inv.metaData;
+  saveData(); renderInvestimentos(); renderDashboard();
+  showToast('Meta removida');
+}
+
+/* ===================== Estudo de alocação ===================== */
+function classificarHorizonte(anos){
+  if(anos < 2) return 'curto';
+  if(anos <= 5) return 'medio';
+  return 'longo';
+}
+
+const PERFIS_ALOCACAO = {
+  curto: {
+    badge: 'Curto prazo · até 2 anos',
+    texto: 'Pouco tempo até a data alvo. A prioridade aqui é não correr risco de o valor cair justamente perto do prazo — liquidez e previsibilidade pesam mais do que rentabilidade extra.',
+    itens: [
+      { nome:'Renda fixa pós-fixada com liquidez diária (Tesouro Selic, CDB de liquidez diária)', peso:60, why:'Acompanha a taxa básica de juros e permite resgatar a qualquer momento sem perder o valor já rendido — essencial quando o prazo é curto.' },
+      { nome:'CDB/LCI/LCA com vencimento alinhado à meta', peso:30, why:'Pode render um pouco mais que a liquidez diária, desde que o vencimento do papel não passe da data da sua meta.' },
+      { nome:'Reserva em poupança ou conta remunerada', peso:10, why:'Para a parte do dinheiro que você pode precisar sacar a qualquer momento, sem nenhuma oscilação.' },
+    ]
+  },
+  medio: {
+    badge: 'Médio prazo · 2 a 5 anos',
+    texto: 'Há tempo suficiente para tolerar pequenas oscilações em troca de um rendimento melhor, mas ainda não é prazo longo o bastante para apostar pesado em ativos voláteis.',
+    itens: [
+      { nome:'Renda fixa atrelada à inflação (Tesouro IPCA+, CDBs indexados)', peso:45, why:'Protege o poder de compra do dinheiro e tende a render mais que a poupança nesse horizonte, com risco baixo se levado até o vencimento.' },
+      { nome:'Renda fixa pós-fixada (Tesouro Selic, CDBs de liquidez diária)', peso:25, why:'Mantém uma parte líquida e estável, útil caso a meta precise ser antecipada.' },
+      { nome:'Fundos imobiliários (FIIs)', peso:20, why:'Podem agregar renda mensal e algum potencial de valorização, mas têm oscilação de preço — vale destinar só uma fatia menor.' },
+      { nome:'Renda variável (ações, ETFs)', peso:10, why:'Uma parcela pequena pode melhorar o retorno médio, mas assume-se mais risco de queda no curto prazo.' },
+    ]
+  },
+  longo: {
+    badge: 'Longo prazo · mais de 5 anos',
+    texto: 'Com mais tempo até a meta, oscilações de curto prazo tendem a se diluir, abrindo espaço para uma fatia maior em ativos de maior potencial de crescimento.',
+    itens: [
+      { nome:'Renda variável (ações, ETFs, fundos de ações)', peso:35, why:'Historicamente tende a render mais no longo prazo, e o tempo disponível ajuda a absorver as quedas ao longo do caminho.' },
+      { nome:'Fundos imobiliários (FIIs)', peso:20, why:'Combinam renda recorrente com exposição a um setor diferente da renda fixa, diversificando a carteira.' },
+      { nome:'Renda fixa atrelada à inflação (Tesouro IPCA+)', peso:30, why:'Serve como base mais estável da carteira, protegendo parte do patrimônio da inflação no longo prazo.' },
+      { nome:'Renda fixa pós-fixada (reserva de liquidez)', peso:15, why:'Uma fatia menor, só para manter alguma liquidez disponível em caso de imprevisto.' },
+    ]
+  }
+};
+
+function estudoAlocacao(id){
+  const inv = state.investimentos.find(x=>x.id===id);
+  if(!inv.metaValor || !inv.metaData){ showToast('Defina uma meta primeiro'); return; }
+  const a = analisarMeta(inv);
+  const anos = a.mesesRestantes/12;
+  const perfilKey = classificarHorizonte(anos);
+  const perfil = PERFIS_ALOCACAO[perfilKey];
+
+  let ritmoNota = '';
+  if(!a.atingida && !a.prazoVencido){
+    if(a.noRitmo){
+      ritmoNota = `Seu ritmo atual de aportes já é compatível com a meta — o estudo abaixo é mais sobre <i>onde</i> alocar do que sobre arriscar mais para correr atrás do prazo.`;
+    } else {
+      ritmoNota = `Seu aporte médio (${fmtBRL(a.ritmoMensal)}/mês) está abaixo do necessário (${fmtBRL(a.aporteMensalNecessario)}/mês). Vale considerar tanto aumentar o aporte quanto revisar o prazo da meta — buscar mais retorno assumindo mais risco para "compensar" o atraso costuma aumentar a chance de perder dinheiro, não só de ganhar mais.`;
+    }
+  }
+
+  const overlay = document.createElement('div');
+  overlay.className = 'overlay study-modal';
+  overlay.innerHTML = `<div class="modal">
+    <h3>Estudo de alocação — ${escapeHtml(inv.nome)}</h3>
+    <div class="study-horizon">
+      <span class="badge">${perfil.badge}</span>
+      <p>${perfil.texto}</p>
+    </div>
+    ${ritmoNota ? `<div class="goal-msg ${a.noRitmo?'':'warn'}" style="margin-bottom:16px;">${ritmoNota}</div>` : ''}
+    ${perfil.itens.map(it=>`
+      <div class="alloc-item">
+        <div class="head"><span class="name">${it.nome}</span><span class="weight">${it.peso}%</span></div>
+        <div class="alloc-bar"><div style="width:${it.peso}%"></div></div>
+        <div class="why">${it.why}</div>
+      </div>
+    `).join('')}
+    <div class="study-disclaimer">Isto é um estudo educativo baseado em categorias gerais de ativos e no prazo da sua meta — não é uma recomendação de investimento personalizada nem indicação de produtos ou instituições específicas. Rentabilidade passada não garante resultado futuro. Para decisões importantes, vale considerar orientação de um profissional certificado.</div>
+    <div class="modal-actions"><button class="btn" id="studyClose">Fechar</button></div>
+  </div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelector('#studyClose').addEventListener('click', ()=>overlay.remove());
+  overlay.addEventListener('click', (e)=>{ if(e.target===overlay) overlay.remove(); });
+}
+
+function abrirAporte(id){
+  openModal({
+    title:'Adicionar aporte',
+    fields:[
+      {key:'valor', label:'Valor do aporte (R$)', type:'number', placeholder:'0,00', step:'0.01'},
+      {key:'data', label:'Data', type:'date'},
+    ],
+    onSubmit:(vals)=>{
+      if(!vals.valor || !vals.data){ showToast('Preencha todos os campos'); return false; }
+      const inv = state.investimentos.find(x=>x.id===id);
+      if(!inv.aportes) inv.aportes=[];
+      inv.aportes.push({ valor: parseFloat(vals.valor), data: vals.data });
+      saveData(); renderInvestimentos(); renderDashboard();
+      showToast('Aporte registrado');
+      return true;
+    }
+  });
+}
+function removerInvest(id){
+  if(!confirm('Excluir este investimento?')) return;
+  state.investimentos = state.investimentos.filter(x=>x.id!==id);
+  saveData(); renderInvestimentos(); renderDashboard();
+  showToast('Investimento excluído');
+}
+
+document.getElementById('addInvestBtn').addEventListener('click', ()=>{
+  openModal({
+    title:'Novo investimento',
+    fields:[
+      {key:'nome', label:'Nome', type:'text', placeholder:'Ex: Tesouro Selic'},
+      {key:'tipo', label:'Tipo', type:'select', options:['Renda Fixa','Renda Variável','Fundo Imobiliário','Cripto','Outro']},
+      {key:'valorInicial', label:'Valor inicial (R$)', type:'number', placeholder:'0,00', step:'0.01'},
+      {key:'dataInicio', label:'Data de início', type:'date'},
+      {key:'metaValor', label:'Meta (R$) — opcional', type:'number', placeholder:'0,00', step:'0.01'},
+      {key:'metaData', label:'Data alvo da meta — opcional', type:'date'},
+    ],
+    onSubmit:(vals)=>{
+      if(!vals.nome || !vals.valorInicial || !vals.dataInicio){ showToast('Preencha todos os campos'); return false; }
+      const novo = { id: uid(), nome: vals.nome, tipo: vals.tipo, valorInicial: parseFloat(vals.valorInicial), dataInicio: vals.dataInicio, aportes:[] };
+      if(vals.metaValor && vals.metaData){
+        novo.metaValor = parseFloat(vals.metaValor);
+        novo.metaData = vals.metaData;
+      }
+      state.investimentos.push(novo);
+      saveData(); renderInvestimentos(); renderDashboard();
+      showToast('Investimento adicionado');
+      return true;
+    }
+  });
+});
+
+/* ===================== DASHBOARD ===================== */
+function renderDashboard(){
+  const pendentes = state.contas.filter(c=>!c.pago);
+  const totalAPagar = pendentes.reduce((s,c)=>s+c.valor,0);
+  document.getElementById('statAPagar').textContent = fmtBRL(totalAPagar);
+  document.getElementById('statAPagarHint').textContent = pendentes.length ? `${pendentes.length} conta(s) pendente(s)` : 'nenhuma conta pendente';
+
+  const vencendo = pendentes.filter(c=> daysUntil(c.vencimento) >=0 && daysUntil(c.vencimento) <=7);
+  const totalVencendo = vencendo.reduce((s,c)=>s+c.valor,0);
+  document.getElementById('statVencendo').textContent = fmtBRL(totalVencendo);
+  document.getElementById('statVencendoHint').textContent = vencendo.length ? `${vencendo.length} conta(s) nos próximos 7 dias` : 'nenhuma conta próxima';
+
+  const totalInvest = state.investimentos.reduce((s,inv)=> s + investTotal(inv), 0);
+  document.getElementById('statInvestido').textContent = fmtBRL(totalInvest);
+  document.getElementById('statInvestidoHint').textContent = state.investimentos.length ? `${state.investimentos.length} posição(ões)` : 'nenhum investimento ainda';
+
+  const up = document.getElementById('dashUpcoming');
+  const proximas = [...pendentes].sort((a,b)=>a.vencimento.localeCompare(b.vencimento)).slice(0,5);
+  if(proximas.length===0){
+    up.innerHTML = `<div class="empty">Nenhuma conta pendente no momento.</div>`;
+  } else {
+    up.innerHTML = `<table><thead><tr><th>Conta</th><th>Valor</th><th>Vencimento</th><th>Status</th></tr></thead><tbody>
+      ${proximas.map(c=>{ const s=statusConta(c); return `<tr><td>${escapeHtml(c.nome)}</td><td class="mono">${fmtBRL(c.valor)}</td><td class="mono">${fmtDate(c.vencimento)}</td><td><span class="tag ${s}">${statusLabel(s)}</span></td></tr>`; }).join('')}
+    </tbody></table>`;
+  }
+
+  const di = document.getElementById('dashInvest');
+  if(state.investimentos.length===0){
+    di.innerHTML = `<div class="empty">Nenhum investimento cadastrado ainda.</div>`;
+  } else {
+    di.innerHTML = state.investimentos.slice(0,3).map(inv=>{
+      const total = investTotal(inv);
+      return `<div class="investment-card"><div class="top"><div><div class="name">${escapeHtml(inv.nome)}</div><div class="type">${escapeHtml(inv.tipo||'Investimento')}</div></div><div class="amount">${fmtBRL(total)}</div></div></div>`;
+    }).join('');
+  }
+}
+
+/* ===================== Modal genérico ===================== */
+function openModal({title, fields, onSubmit}){
+  const overlay = document.createElement('div');
+  overlay.className = 'overlay';
+  overlay.innerHTML = `<div class="modal">
+    <h3>${title}</h3>
+    <form id="modalForm">
+      ${fields.map(f=>{
+        if(f.type==='select'){
+          return `<div class="field"><label>${f.label}</label><select name="${f.key}">${f.options.map(o=>`<option value="${o}">${o}</option>`).join('')}</select></div>`;
+        }
+        return `<div class="field"><label>${f.label}</label><input name="${f.key}" type="${f.type}" placeholder="${f.placeholder||''}" ${f.step?`step="${f.step}"`:''}></div>`;
+      }).join('')}
+      <div class="modal-actions">
+        <button type="button" class="btn ghost" id="modalCancel">Cancelar</button>
+        <button type="submit" class="btn">Salvar</button>
+      </div>
+    </form>
+  </div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelector('#modalCancel').addEventListener('click', ()=>overlay.remove());
+  overlay.addEventListener('click', (e)=>{ if(e.target===overlay) overlay.remove(); });
+  overlay.querySelector('#modalForm').addEventListener('submit', (e)=>{
+    e.preventDefault();
+    const data = new FormData(e.target);
+    const vals = {};
+    fields.forEach(f=> vals[f.key] = data.get(f.key));
+    const ok = onSubmit(vals);
+    if(ok !== false) overlay.remove();
+  });
+  const firstInput = overlay.querySelector('input, select');
+  if(firstInput) firstInput.focus();
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+
+/* ===================== Exportar / Importar ===================== */
+document.getElementById('exportBtn').addEventListener('click', ()=>{
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type:'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `livro-financas-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Dados exportados');
+});
+
+document.getElementById('importBtn').addEventListener('click', ()=>{
+  document.getElementById('importFile').click();
+});
+document.getElementById('importFile').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (evt)=>{
+    try{
+      const data = JSON.parse(evt.target.result);
+      if(!data.contas || !data.investimentos) throw new Error('formato inválido');
+      state = {
+        contas: data.contas,
+        investimentos: data.investimentos,
+        salario: data.salario || { valor:0, percentual:40 },
+        valeAlimentacao: data.valeAlimentacao || []
+      };
+      saveData();
+      renderContas(); renderInvestimentos(); renderDashboard();
+      showToast('Dados importados com sucesso');
+    }catch(err){
+      showToast('Arquivo inválido. Verifique o JSON.');
+      console.error(err);
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+/* ===================== RENDA ===================== */
+function renderRenda(){
+  document.getElementById('salarioValor').value = state.salario.valor || '';
+  document.getElementById('salarioPct').value = state.salario.percentual || '';
+  const valor = state.salario.valor || 0;
+  const pct = state.salario.percentual || 0;
+  const adiantamento = valor * (pct/100);
+  const saldo = valor - adiantamento;
+  document.getElementById('resAdiantamento').textContent = fmtBRL(adiantamento);
+  document.getElementById('resSaldo').textContent = fmtBRL(saldo);
+  renderVA();
+}
+
+document.getElementById('salvarSalarioBtn').addEventListener('click', ()=>{
+  const valor = parseFloat(document.getElementById('salarioValor').value);
+  const pct = parseFloat(document.getElementById('salarioPct').value);
+  if(isNaN(valor) || isNaN(pct)){ showToast('Preencha salário e percentual'); return; }
+  state.salario = { valor, percentual: pct };
+  saveData();
+  renderRenda();
+  showToast('Salário atualizado');
+});
+
+function mesLabel(mesStr){
+  const [y,m] = mesStr.split('-');
+  const nomes = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  return `${nomes[parseInt(m,10)-1]} de ${y}`;
+}
+
+function renderVA(){
+  const wrap = document.getElementById('vaWrap');
+  if(state.valeAlimentacao.length===0){
+    wrap.innerHTML = `<div class="empty">Nenhum registro de vale alimentação ainda.</div>`;
+    return;
+  }
+  const sorted = [...state.valeAlimentacao].sort((a,b)=> b.mes.localeCompare(a.mes));
+  wrap.innerHTML = `<table>
+    <thead><tr><th>Mês</th><th>Valor</th><th></th></tr></thead>
+    <tbody>${sorted.map(v=>`<tr>
+      <td style="text-transform:capitalize;">${mesLabel(v.mes)}</td>
+      <td class="mono">${fmtBRL(v.valor)}</td>
+      <td><div class="row-actions"><button onclick="removerVA('${v.id}')">excluir</button></div></td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+function removerVA(id){
+  state.valeAlimentacao = state.valeAlimentacao.filter(x=>x.id!==id);
+  saveData(); renderVA();
+  showToast('Registro removido');
+}
+
+document.getElementById('addVaBtn').addEventListener('click', ()=>{
+  openModal({
+    title:'Registrar vale alimentação',
+    fields:[
+      {key:'mes', label:'Mês de referência', type:'month'},
+      {key:'valor', label:'Valor recebido (R$)', type:'number', placeholder:'0,00', step:'0.01'},
+    ],
+    onSubmit:(vals)=>{
+      if(!vals.mes || !vals.valor){ showToast('Preencha todos os campos'); return false; }
+      const existente = state.valeAlimentacao.find(v=>v.mes===vals.mes);
+      if(existente){ existente.valor = parseFloat(vals.valor); }
+      else { state.valeAlimentacao.push({ id: uid(), mes: vals.mes, valor: parseFloat(vals.valor) }); }
+      saveData(); renderVA();
+      showToast('Vale alimentação registrado');
+      return true;
+    }
+  });
+});
+
+/* ===================== CALENDÁRIO ===================== */
+let calCursor = new Date(); calCursor.setDate(1);
+
+function calcularPascoa(year){
+  const a = year%19, b=Math.floor(year/100), c=year%100, d=Math.floor(b/4), e=b%4,
+        f=Math.floor((b+8)/25), g=Math.floor((b-f+1)/3), h=(19*a+b-d-g+15)%30,
+        i=Math.floor(c/4), k=c%4, l=(32+2*e+2*i-h-k)%7, m=Math.floor((a+11*h+22*l)/451),
+        month=Math.floor((h+l-7*m+114)/31), day=((h+l-7*m+114)%31)+1;
+  return new Date(year, month-1, day);
+}
+function addDays(date, days){
+  const d = new Date(date);
+  d.setDate(d.getDate()+days);
+  return d;
+}
+function toISO(d){
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+function getFeriados(year){
+  const pascoa = calcularPascoa(year);
+  const lista = [
+    { date:`${year}-01-01`, name:'Confraternização Universal', tipo:'nacional' },
+    { date: toISO(addDays(pascoa,-47)), name:'Carnaval', tipo:'nacional' },
+    { date: toISO(addDays(pascoa,-2)), name:'Sexta-feira Santa', tipo:'nacional' },
+    { date:`${year}-04-21`, name:'Tiradentes', tipo:'nacional' },
+    { date:`${year}-05-01`, name:'Dia do Trabalho', tipo:'nacional' },
+    { date: toISO(addDays(pascoa,60)), name:'Corpus Christi (ponto facultativo)', tipo:'nacional' },
+    { date:`${year}-08-15`, name:'Nossa Senhora de Abadia (padroeira de Campo Grande)', tipo:'municipal' },
+    { date:`${year}-08-26`, name:'Aniversário de Campo Grande', tipo:'municipal' },
+    { date:`${year}-09-07`, name:'Independência do Brasil', tipo:'nacional' },
+    { date:`${year}-10-11`, name:'Criação do Estado de Mato Grosso do Sul', tipo:'municipal' },
+    { date:`${year}-10-12`, name:'Nossa Senhora Aparecida', tipo:'nacional' },
+    { date:`${year}-11-02`, name:'Finados', tipo:'nacional' },
+    { date:`${year}-11-15`, name:'Proclamação da República', tipo:'nacional' },
+    { date:`${year}-11-20`, name:'Consciência Negra', tipo:'nacional' },
+    { date:`${year}-12-25`, name:'Natal', tipo:'nacional' },
+  ];
+  return lista;
+}
+
+function renderCalendario(){
+  const year = calCursor.getFullYear();
+  const month = calCursor.getMonth();
+  const meses = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  document.getElementById('calTitle').textContent = `${meses[month]} de ${year}`;
+
+  const feriadosAno = getFeriados(year);
+  const feriadosMes = feriadosAno.filter(f=> f.date.slice(0,7) === `${year}-${String(month+1).padStart(2,'0')}`);
+  const feriadosMap = {};
+  feriadosMes.forEach(f=> feriadosMap[f.date] = f);
+
+  const firstDay = new Date(year, month, 1);
+  const startOffset = firstDay.getDay();
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  const todayISO = toISO(new Date());
+
+  let diasUteis = 0;
+  const cells = [];
+  for(let i=0;i<startOffset;i++) cells.push(`<div class="cal-day empty"></div>`);
+  for(let day=1; day<=daysInMonth; day++){
+    const d = new Date(year, month, day);
+    const iso = toISO(d);
+    const dow = d.getDay();
+    const isWeekend = dow===0 || dow===6;
+    const feriado = feriadosMap[iso];
+    let cls = 'cal-day';
+    if(iso===todayISO) cls += ' today';
+    if(feriado) cls += feriado.tipo==='nacional' ? ' holiday-nacional' : ' holiday-municipal';
+    else if(isWeekend) cls += ' weekend';
+    if(!isWeekend && !feriado) diasUteis++;
+    cells.push(`<div class="${cls}" title="${feriado?escapeHtml(feriado.name):''}">${day}${feriado?'<span class="dot"></span>':''}</div>`);
+  }
+
+  document.getElementById('calGrid').innerHTML = `
+    <div class="cal-dow">Dom</div><div class="cal-dow">Seg</div><div class="cal-dow">Ter</div>
+    <div class="cal-dow">Qua</div><div class="cal-dow">Qui</div><div class="cal-dow">Sex</div><div class="cal-dow">Sáb</div>
+    ${cells.join('')}
+  `;
+  document.getElementById('calUteis').textContent = diasUteis;
+  document.getElementById('calFeriadosCount').textContent = feriadosMes.length;
+
+  const list = document.getElementById('calHolidayList');
+  if(feriadosMes.length===0){
+    list.innerHTML = `<div class="empty">Nenhum feriado neste mês.</div>`;
+  } else {
+    list.innerHTML = [...feriadosMes].sort((a,b)=>a.date.localeCompare(b.date)).map(f=>`
+      <div class="hl-item">
+        <span>${fmtDate(f.date)} — ${escapeHtml(f.name)}</span>
+        <span class="hl-tag ${f.tipo}">${f.tipo==='nacional'?'Nacional':'Campo Grande/MS'}</span>
+      </div>
+    `).join('');
+  }
+}
+
+document.getElementById('calPrev').addEventListener('click', ()=>{ calCursor.setMonth(calCursor.getMonth()-1); renderCalendario(); });
+document.getElementById('calNext').addEventListener('click', ()=>{ calCursor.setMonth(calCursor.getMonth()+1); renderCalendario(); });
+document.getElementById('calToday').addEventListener('click', ()=>{ calCursor = new Date(); calCursor.setDate(1); renderCalendario(); });
+
+/* ===================== Inicialização ===================== */
+renderContas();
+renderInvestimentos();
+renderDashboard();
+</script>
+</body>
+</html>
