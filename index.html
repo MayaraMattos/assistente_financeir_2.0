@@ -738,8 +738,30 @@ document.getElementById('addContaBtn').addEventListener('click', ()=>{
 });
 
 /* ===================== RECORRÊNCIAS ===================== */
-/* Gera automaticamente as contas de cada mês, do mês de início até o mês atual,
-   respeitando a duração definida (ou indefinidamente, se não houver limite). */
+function recorrenciaAtivaNoMes(rec, mesRef){
+  if(rec.mesInicio > mesRef) return false;
+  if(!rec.duracaoMeses) return true;
+  const [iy, im] = rec.mesInicio.split('-').map(Number);
+  const [my, mm] = mesRef.split('-').map(Number);
+  const diff = (my-iy)*12 + (mm-im);
+  return diff >= 0 && diff < rec.duracaoMeses;
+}
+
+function contaRecorrenciaExiste(recId, mesRef){
+  return state.contas.some(c=> c.recorrenciaId===recId && c.mesRef===mesRef);
+}
+
+function criarContaRecorrencia(rec, mesRef){
+  const [ay, am] = mesRef.split('-').map(Number);
+  const ultimoDia = new Date(ay, am, 0).getDate();
+  const dia = Math.min(rec.diaVencimento, ultimoDia);
+  const vencimento = `${mesRef}-${String(dia).padStart(2,'0')}`;
+  const conta = { id: uid(), nome: rec.nome, valor: rec.valor, vencimento, pago:false, recorrenciaId: rec.id, mesRef, categoria: rec.categoria || 'Outros' };
+  state.contas.push(conta);
+  return conta;
+}
+
+/* Garante que existam contas de todas as recorrências ativas, do mês de início até o mês atual. */
 function gerarContasRecorrentes(){
   const hoje = new Date();
   const limiteAtual = hoje.getFullYear()+'-'+String(hoje.getMonth()+1).padStart(2,'0');
@@ -748,26 +770,32 @@ function gerarContasRecorrentes(){
   state.recorrencias.forEach(rec=>{
     let [ay, am] = rec.mesInicio.split('-').map(Number);
     let cursor = new Date(ay, am-1, 1);
-    let count = 0;
     while(true){
       const mesRef = cursor.getFullYear()+'-'+String(cursor.getMonth()+1).padStart(2,'0');
       if(mesRef > limiteAtual) break;
-      if(rec.duracaoMeses && count >= rec.duracaoMeses) break;
-
-      const jaExiste = state.contas.some(c=> c.recorrenciaId===rec.id && c.mesRef===mesRef);
-      if(!jaExiste){
-        const ultimoDia = new Date(cursor.getFullYear(), cursor.getMonth()+1, 0).getDate();
-        const dia = Math.min(rec.diaVencimento, ultimoDia);
-        const vencimento = `${mesRef}-${String(dia).padStart(2,'0')}`;
-        state.contas.push({ id: uid(), nome: rec.nome, valor: rec.valor, vencimento, pago:false, recorrenciaId: rec.id, mesRef, categoria: rec.categoria || 'Outros' });
+      if(!recorrenciaAtivaNoMes(rec, mesRef)) break;
+      if(!contaRecorrenciaExiste(rec.id, mesRef)){
+        criarContaRecorrencia(rec, mesRef);
         mudou = true;
       }
-      count++;
       cursor.setMonth(cursor.getMonth()+1);
     }
   });
 
   if(mudou) saveData();
+}
+
+/* Garante a conta de cada recorrência ativa para UM mês específico, mesmo que seja
+   um mês futuro (usado ao lançar a fatura do cartão de um mês que ainda não chegou). */
+function garantirRecorrenciasDoMes(mesRef){
+  const criadas = [];
+  state.recorrencias.forEach(rec=>{
+    if(recorrenciaAtivaNoMes(rec, mesRef) && !contaRecorrenciaExiste(rec.id, mesRef)){
+      criadas.push(criarContaRecorrencia(rec, mesRef));
+    }
+  });
+  if(criadas.length) saveData();
+  return criadas;
 }
 
 function renderRecorrencias(){
@@ -889,11 +917,12 @@ function renderCartoes(){
 
 function importarRecorrenciasFatura(faturaId){
   const fatura = state.cartoes.find(f=>f.id===faturaId);
+  garantirRecorrenciasDoMes(fatura.mes);
   const jaImportados = new Set(fatura.gastos.filter(g=>g.origemContaId).map(g=>g.origemContaId));
   const recorrentesMes = state.contas.filter(c=> c.recorrenciaId && c.vencimento.slice(0,7)===fatura.mes && !jaImportados.has(c.id));
-  if(recorrentesMes.length===0){ showToast('Nenhuma recorrência nova para importar neste mês'); return; }
+  if(recorrentesMes.length===0){ showToast('Nenhuma recorrência ativa para este mês, ou todas já foram importadas'); return; }
   recorrentesMes.forEach(c=> fatura.gastos.push({ id: uid(), descricao: c.nome, valor: c.valor, origemContaId: c.id }));
-  saveData(); renderCartoes(); renderDashboard();
+  saveData(); renderCartoes(); renderContas(); renderDashboard();
   showToast(`${recorrentesMes.length} recorrência(s) importada(s)`);
 }
 
@@ -913,6 +942,7 @@ document.getElementById('addFaturaBtn').addEventListener('click', ()=>{
 
       let importadas = 0;
       if(vals.incluirRecorrencias !== 'Não'){
+        garantirRecorrenciasDoMes(vals.mes);
         const recorrentesMes = state.contas.filter(c=> c.recorrenciaId && c.vencimento.slice(0,7)===vals.mes);
         recorrentesMes.forEach(c=>{
           fatura.gastos.push({ id: uid(), descricao: c.nome, valor: c.valor, origemContaId: c.id });
@@ -921,7 +951,7 @@ document.getElementById('addFaturaBtn').addEventListener('click', ()=>{
       }
 
       state.cartoes.push(fatura);
-      saveData(); renderCartoes(); renderDashboard();
+      saveData(); renderCartoes(); renderContas(); renderDashboard();
       showToast(importadas>0 ? `Fatura lançada com ${importadas} recorrência(s) importada(s)` : 'Fatura lançada');
       return true;
     }
