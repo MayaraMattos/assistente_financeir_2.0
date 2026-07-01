@@ -319,6 +319,9 @@
     box-shadow:0 2px 6px rgba(92,106,196,.35);
   }
   .study-horizon p{margin:0;font-size:12.5px;color:var(--ink2);line-height:1.55;}
+  .study-horizon p + p{margin-top:8px;}
+  .study-horizon.accel{background:var(--accent2-soft);border-color:var(--accent2);}
+  .study-horizon .badge.accent2{background:var(--accent2);box-shadow:0 2px 6px rgba(16,185,129,.35);}
   .alloc-item{
     border-radius:var(--r-sm);padding:16px 18px;margin-bottom:10px;
     background:var(--surface2);border:1px solid var(--line);
@@ -1284,6 +1287,7 @@ const PERFIS_ALOCACAO = {
   curto: {
     badge: 'Curto prazo · até 2 anos',
     texto: 'Pouco tempo até a data alvo. A prioridade aqui é não correr risco de o valor cair justamente perto do prazo — liquidez e previsibilidade pesam mais do que rentabilidade extra.',
+    taxaRef: { min: 8, max: 11 },
     itens: [
       { nome:'Renda fixa pós-fixada com liquidez diária (Tesouro Selic, CDB de liquidez diária)', peso:60, why:'Acompanha a taxa básica de juros e permite resgatar a qualquer momento sem perder o valor já rendido — essencial quando o prazo é curto.' },
       { nome:'CDB/LCI/LCA com vencimento alinhado à meta', peso:30, why:'Pode render um pouco mais que a liquidez diária, desde que o vencimento do papel não passe da data da sua meta.' },
@@ -1293,6 +1297,7 @@ const PERFIS_ALOCACAO = {
   medio: {
     badge: 'Médio prazo · 2 a 5 anos',
     texto: 'Há tempo suficiente para tolerar pequenas oscilações em troca de um rendimento melhor, mas ainda não é prazo longo o bastante para apostar pesado em ativos voláteis.',
+    taxaRef: { min: 9, max: 13 },
     itens: [
       { nome:'Renda fixa atrelada à inflação (Tesouro IPCA+, CDBs indexados)', peso:45, why:'Protege o poder de compra do dinheiro e tende a render mais que a poupança nesse horizonte, com risco baixo se levado até o vencimento.' },
       { nome:'Renda fixa pós-fixada (Tesouro Selic, CDBs de liquidez diária)', peso:25, why:'Mantém uma parte líquida e estável, útil caso a meta precise ser antecipada.' },
@@ -1303,6 +1308,7 @@ const PERFIS_ALOCACAO = {
   longo: {
     badge: 'Longo prazo · mais de 5 anos',
     texto: 'Com mais tempo até a meta, oscilações de curto prazo tendem a se diluir, abrindo espaço para uma fatia maior em ativos de maior potencial de crescimento.',
+    taxaRef: { min: 9, max: 15 },
     itens: [
       { nome:'Renda variável (ações, ETFs, fundos de ações)', peso:35, why:'Historicamente tende a render mais no longo prazo, e o tempo disponível ajuda a absorver as quedas ao longo do caminho.' },
       { nome:'Fundos imobiliários (FIIs)', peso:20, why:'Combinam renda recorrente com exposição a um setor diferente da renda fixa, diversificando a carteira.' },
@@ -1311,6 +1317,30 @@ const PERFIS_ALOCACAO = {
     ]
   }
 };
+
+/* ---- Projeção com juros compostos: quanto o rendimento pode acelerar a meta ---- */
+function taxaMensalEquivalente(taxaAnualPct){
+  return Math.pow(1 + taxaAnualPct/100, 1/12) - 1;
+}
+function aporteNecessarioComRendimento(total, metaValor, meses, taxaAnualPct){
+  if(meses<=0) return Math.max(0, metaValor-total);
+  const i = taxaMensalEquivalente(taxaAnualPct);
+  if(i<=0) return Math.max(0, (metaValor-total)/meses);
+  const fator = Math.pow(1+i, meses);
+  const valorFuturoSemAporte = total*fator;
+  if(valorFuturoSemAporte >= metaValor) return 0;
+  return Math.max(0, (metaValor - valorFuturoSemAporte) * i / (fator - 1));
+}
+function mesesParaAtingirComAporte(total, metaValor, aporteMensal, taxaAnualPct){
+  if(total>=metaValor) return 0;
+  if(aporteMensal<=0) return Infinity;
+  const i = taxaMensalEquivalente(taxaAnualPct);
+  if(i<=0) return Math.ceil((metaValor-total)/aporteMensal);
+  const k = aporteMensal/i;
+  const x = (metaValor + k) / (total + k);
+  if(x<=0) return Infinity;
+  return Math.max(0, Math.ceil(Math.log(x)/Math.log(1+i)));
+}
 
 function estudoAlocacao(id){
   const inv = state.investimentos.find(x=>x.id===id);
@@ -1327,6 +1357,35 @@ function estudoAlocacao(id){
     } else {
       ritmoNota = `Seu aporte médio (${fmtBRL(a.ritmoMensal)}/mês) está abaixo do necessário (${fmtBRL(a.aporteMensalNecessario)}/mês). Vale considerar tanto aumentar o aporte quanto revisar o prazo da meta — buscar mais retorno assumindo mais risco para "compensar" o atraso costuma aumentar a chance de perder dinheiro, não só de ganhar mais.`;
     }
+  }
+
+  // Projeção: quanto o rendimento (em vez de dinheiro parado) pode acelerar a meta
+  let acelHtml = '';
+  const mesesRestInt = Math.round(a.mesesRestantes);
+  if(!a.atingida && mesesRestInt > 0){
+    const { min: taxaMin, max: taxaMax } = perfil.taxaRef;
+    const aporteComMin = aporteNecessarioComRendimento(a.total, inv.metaValor, mesesRestInt, taxaMin);
+    const aporteComMax = aporteNecessarioComRendimento(a.total, inv.metaValor, mesesRestInt, taxaMax);
+    const [aporteBaixo, aporteAlto] = [Math.min(aporteComMin,aporteComMax), Math.max(aporteComMin,aporteComMax)];
+
+    let tempoHtml = '';
+    if(a.ritmoMensal > 0){
+      const mesesSemRend = Math.ceil(a.restante / a.ritmoMensal);
+      const mesesComMin = mesesParaAtingirComAporte(a.total, inv.metaValor, a.ritmoMensal, taxaMin);
+      const mesesComMax = mesesParaAtingirComAporte(a.total, inv.metaValor, a.ritmoMensal, taxaMax);
+      const mesesComBaixo = Math.min(mesesComMin, mesesComMax);
+      const mesesComAlto = Math.max(mesesComMin, mesesComMax);
+      const economiaMeses = mesesSemRend - mesesComAlto;
+      tempoHtml = `<p>Mantendo seu aporte médio atual de <b>${fmtBRL(a.ritmoMensal)}/mês</b> parado (sem render nada), você levaria cerca de <b>${mesesSemRend} ${mesesSemRend===1?'mês':'meses'}</b> para chegar à meta. Deixando esse valor investido nessa faixa de retorno, o prazo cai para algo entre <b>${mesesComBaixo}</b> e <b>${mesesComAlto} meses</b>${economiaMeses>0?` — cerca de <b>${economiaMeses} ${economiaMeses===1?'mês':'meses'} mais rápido</b>`:''}.</p>`;
+    }
+
+    acelHtml = `<div class="study-horizon accel">
+      <span class="badge accent2">Rendimento pode acelerar a meta</span>
+      <div>
+        <p>Sem contar nenhum rendimento, o aporte necessário para bater o prazo é de <b>${fmtBRL(a.aporteMensalNecessario)}/mês</b>. Considerando uma faixa de retorno de referência para esse perfil (${taxaMin}% a ${taxaMax}% ao ano), o aporte necessário cai para algo entre <b>${fmtBRL(aporteBaixo)}</b> e <b>${fmtBRL(aporteAlto)}</b> por mês.</p>
+        ${tempoHtml}
+      </div>
+    </div>`;
   }
 
   const overlay = document.createElement('div');
@@ -1346,7 +1405,8 @@ function estudoAlocacao(id){
         <div class="why">${it.why}</div>
       </div>
     `).join('')}
-    <div class="study-disclaimer">Isto é um estudo educativo baseado em categorias gerais de ativos e no prazo da sua meta — não é uma recomendação de investimento personalizada nem indicação de produtos ou instituições específicas. Rentabilidade passada não garante resultado futuro. Para decisões importantes, vale considerar orientação de um profissional certificado.</div>
+    ${acelHtml}
+    <div class="study-disclaimer">Isto é um estudo educativo baseado em categorias gerais de ativos e no prazo da sua meta — não é uma recomendação de investimento personalizada nem indicação de produtos ou instituições específicas. As faixas de retorno usadas na projeção são referências ilustrativas aproximadas, não uma promessa de rendimento. Rentabilidade passada não garante resultado futuro. Para decisões importantes, vale considerar orientação de um profissional certificado.</div>
     <div class="modal-actions"><button class="btn" id="studyClose">Fechar</button></div>
   </div>`;
   document.body.appendChild(overlay);
