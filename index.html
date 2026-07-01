@@ -306,7 +306,13 @@
   .no-goal button:hover{color:var(--ink);text-decoration:underline;}
 
   /* ===== ESTUDO DE ALOCAÇÃO ===== */
-  .study-modal .modal{max-width:560px;}
+  .estudo-inline{
+    margin-top:18px;padding-top:18px;border-top:1px dashed var(--line);
+  }
+  .estudo-inline-title{
+    font-family:'Space Mono',monospace;font-size:10.5px;letter-spacing:.04em;
+    text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:12px;
+  }
   .study-horizon{
     display:flex;gap:12px;align-items:flex-start;margin-bottom:18px;
     padding:14px 16px;background:var(--surface2);border-radius:var(--r-sm);
@@ -1222,7 +1228,8 @@ function renderInvestimentos(){
           <span>Aporte médio: <b>${fmtBRL(a.ritmoMensal)}/mês</b></span>
         </div>
         <div class="goal-msg ${msgClass}">${msg}</div>
-        <div class="no-goal"><button onclick="estudoAlocacao('${inv.id}')">ver estudo de alocação</button> · <button onclick="editarMeta('${inv.id}')">editar meta</button> · <button onclick="removerMeta('${inv.id}')">remover meta</button></div>
+        ${!a.atingida ? construirEstudoAlocacao(inv, a) : ''}
+        <div class="no-goal"><button onclick="editarMeta('${inv.id}')">editar meta</button> · <button onclick="removerMeta('${inv.id}')">remover meta</button></div>
       </div>`;
     } else {
       goalHtml = `<div class="no-goal"><button onclick="editarMeta('${inv.id}')">+ definir meta para este investimento</button></div>`;
@@ -1342,10 +1349,7 @@ function mesesParaAtingirComAporte(total, metaValor, aporteMensal, taxaAnualPct)
   return Math.max(0, Math.ceil(Math.log(x)/Math.log(1+i)));
 }
 
-function estudoAlocacao(id){
-  const inv = state.investimentos.find(x=>x.id===id);
-  if(!inv.metaValor || !inv.metaData){ showToast('Defina uma meta primeiro'); return; }
-  const a = analisarMeta(inv);
+function construirEstudoAlocacao(inv, a){
   const anos = a.mesesRestantes/12;
   const perfilKey = classificarHorizonte(anos);
   const perfil = PERFIS_ALOCACAO[perfilKey];
@@ -1388,11 +1392,8 @@ function estudoAlocacao(id){
     </div>`;
   }
 
-  const overlay = document.createElement('div');
-  overlay.className = 'overlay study-modal';
-  overlay.innerHTML = `<div class="modal">
-    <h3>Estudo de alocação — ${escapeHtml(inv.nome)}</h3>
-    ${inv.metaDescricao ? `<div class="goal-msg" style="margin-bottom:16px;"><b>Sua meta:</b> ${escapeHtml(inv.metaDescricao)}</div>` : ''}
+  return `<div class="estudo-inline">
+    <div class="estudo-inline-title">Estudo de alocação — melhor aplicação para essa meta</div>
     <div class="study-horizon">
       <span class="badge">${perfil.badge}</span>
       <p>${perfil.texto}</p>
@@ -1407,11 +1408,7 @@ function estudoAlocacao(id){
     `).join('')}
     ${acelHtml}
     <div class="study-disclaimer">Isto é um estudo educativo baseado em categorias gerais de ativos e no prazo da sua meta — não é uma recomendação de investimento personalizada nem indicação de produtos ou instituições específicas. As faixas de retorno usadas na projeção são referências ilustrativas aproximadas, não uma promessa de rendimento. Rentabilidade passada não garante resultado futuro. Para decisões importantes, vale considerar orientação de um profissional certificado.</div>
-    <div class="modal-actions"><button class="btn" id="studyClose">Fechar</button></div>
   </div>`;
-  document.body.appendChild(overlay);
-  overlay.querySelector('#studyClose').addEventListener('click', ()=>overlay.remove());
-  overlay.addEventListener('click', (e)=>{ if(e.target===overlay) overlay.remove(); });
 }
 
 function abrirAporte(id){
