@@ -260,6 +260,18 @@
     border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);
   }
   .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:22px;}
+  .wide-modal .modal{max-width:640px;}
+  .modal-preview{margin-top:4px;}
+  .modal-preview:empty{display:none;}
+  .preview-hint{
+    font-size:12.5px;color:var(--muted);background:var(--surface2);
+    border:1px dashed var(--line);border-radius:var(--r-sm);padding:14px 16px;
+    line-height:1.55;margin-top:6px;
+  }
+  .preview-hint.success{
+    color:var(--accent2);background:var(--accent2-soft);border:1px solid var(--accent2);font-weight:600;
+  }
+  .modal-preview .estudo-inline{border-top:1px dashed var(--line);margin-top:6px;padding-top:18px;}
 
   /* ===== INVESTMENT / META CARDS ===== */
   .investment-card{
@@ -1256,6 +1268,20 @@ function renderInvestimentos(){
   }).join('');
 }
 
+function construirPreviewMeta(valorInicial, aportes, dataInicio, metaValorStr, metaDataStr){
+  const metaValor = parseFloat(metaValorStr);
+  const dataValida = s => !!s && /^\d{4}-\d{2}-\d{2}$/.test(s);
+  if(isNaN(metaValor) || metaValor<=0 || !dataValida(metaDataStr) || !dataValida(dataInicio)){
+    return `<div class="preview-hint">Preencha o valor inicial, a data de início e o valor + data da meta para ver a análise de qual investimento pode te ajudar a chegar lá.</div>`;
+  }
+  const tempInv = { valorInicial: valorInicial||0, aportes: aportes||[], dataInicio, metaValor, metaData: metaDataStr };
+  const a = analisarMeta(tempInv);
+  if(a.atingida){
+    return `<div class="preview-hint success">Com o valor inicial informado, essa meta já estaria atingida assim que você salvar!</div>`;
+  }
+  return construirEstudoAlocacao(tempInv, a);
+}
+
 function editarMeta(id){
   const inv = state.investimentos.find(x=>x.id===id);
   openModal({
@@ -1265,6 +1291,7 @@ function editarMeta(id){
       {key:'metaData', label:'Data alvo', type:'date', value: inv.metaData},
       {key:'metaDescricao', label:'Descreva a meta (opcional)', type:'textarea', placeholder:'Ex: Juntar dinheiro para dar entrada num carro', value: inv.metaDescricao},
     ],
+    livePreview:(vals)=> construirPreviewMeta(inv.valorInicial, inv.aportes||[], inv.dataInicio, vals.metaValor, vals.metaData),
     onSubmit:(vals)=>{
       if(!vals.metaValor || !vals.metaData){ showToast('Preencha todos os campos'); return false; }
       inv.metaValor = parseFloat(vals.metaValor);
@@ -1472,6 +1499,7 @@ document.getElementById('addInvestBtn').addEventListener('click', ()=>{
       {key:'metaData', label:'Data alvo da meta — opcional', type:'date'},
       {key:'metaDescricao', label:'Descreva a meta (opcional)', type:'textarea', placeholder:'Ex: Juntar dinheiro para dar entrada num carro'},
     ],
+    livePreview:(vals)=> construirPreviewMeta(parseFloat(vals.valorInicial), [], vals.dataInicio, vals.metaValor, vals.metaData),
     onSubmit:(vals)=>{
       if(!vals.nome || !vals.valorInicial || !vals.dataInicio){ showToast('Preencha todos os campos'); return false; }
       const novo = { id: uid(), nome: vals.nome, tipo: vals.tipo, valorInicial: parseFloat(vals.valorInicial), dataInicio: vals.dataInicio, aportes:[] };
@@ -1608,9 +1636,9 @@ function renderChartMensal(){
 }
 
 /* ===================== Modal genérico ===================== */
-function openModal({title, fields, onSubmit}){
+function openModal({title, fields, onSubmit, livePreview}){
   const overlay = document.createElement('div');
-  overlay.className = 'overlay';
+  overlay.className = 'overlay' + (livePreview ? ' wide-modal' : '');
   overlay.innerHTML = `<div class="modal">
     <h3>${title}</h3>
     <form id="modalForm">
@@ -1623,6 +1651,7 @@ function openModal({title, fields, onSubmit}){
         }
         return `<div class="field"><label>${f.label}</label><input name="${f.key}" type="${f.type}" placeholder="${f.placeholder||''}" ${f.step?`step="${f.step}"`:''} value="${f.value!=null?f.value:''}"></div>`;
       }).join('')}
+      ${livePreview ? `<div class="modal-preview" id="modalPreview"></div>` : ''}
       <div class="modal-actions">
         <button type="button" class="btn ghost" id="modalCancel">Cancelar</button>
         <button type="submit" class="btn">Salvar</button>
@@ -1640,6 +1669,19 @@ function openModal({title, fields, onSubmit}){
     const ok = onSubmit(vals);
     if(ok !== false) overlay.remove();
   });
+  if(livePreview){
+    const form = overlay.querySelector('#modalForm');
+    const previewEl = overlay.querySelector('#modalPreview');
+    const updatePreview = ()=>{
+      const data = new FormData(form);
+      const vals = {};
+      fields.forEach(f=> vals[f.key] = data.get(f.key));
+      previewEl.innerHTML = livePreview(vals);
+    };
+    form.addEventListener('input', updatePreview);
+    form.addEventListener('change', updatePreview);
+    updatePreview();
+  }
   const firstInput = overlay.querySelector('input, select');
   if(firstInput) firstInput.focus();
 }
