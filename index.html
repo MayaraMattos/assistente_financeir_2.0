@@ -74,7 +74,6 @@
     position:sticky;top:0;height:100vh;overflow-y:auto;
   }
   [data-theme="dark"] .sidebar{background:#09090B;border-right:1px solid var(--line);}
-  @media(max-width:800px){.sidebar{position:relative;height:auto;flex-direction:row;align-items:center;justify-content:space-between;padding:14px 16px;}}
   .brand{display:flex;align-items:center;gap:10px;padding:0 8px;}
   .brand-logo{
     width:36px;height:36px;border-radius:10px;
@@ -86,21 +85,23 @@
   }
   .brand-text{font-family:'Fraunces',serif;font-size:22px;font-weight:700;color:#fff;letter-spacing:-.02em;}
   .brand-text span{opacity:.45;font-weight:400;font-size:14px;font-family:'Inter',sans-serif;letter-spacing:0;display:block;margin-top:-3px;}
-  @media(max-width:800px){.brand-block{display:none;}}
   nav{margin-top:32px;display:flex;flex-direction:column;gap:3px;}
-  @media(max-width:800px){nav{margin-top:0;flex-direction:row;overflow-x:auto;-webkit-overflow-scrolling:touch;}}
   nav button{
-    all:unset;cursor:pointer;
+    all:unset;cursor:pointer;position:relative;
     padding:11px 12px;border-radius:var(--r-sm);
     font-size:13.5px;font-weight:500;color:rgba(255,255,255,.55);
     display:flex;align-items:center;gap:10px;
     transition:background .15s,color .15s;
     white-space:nowrap;
   }
-  nav button .nav-icon{font-size:15px;opacity:.75;}
+  nav button .nav-icon{font-size:15px;opacity:.75;transition:color .15s,opacity .15s;}
   nav button:hover{background:rgba(255,255,255,.08);color:rgba(255,255,255,.9);}
   nav button.active{background:rgba(255,255,255,.12);color:#fff;}
-  nav button.active .nav-icon{opacity:1;}
+  nav button.active .nav-icon{opacity:1;color:var(--accent2);}
+  nav button.active::before{
+    content:'';position:absolute;left:-16px;top:8px;bottom:8px;width:4px;
+    background:var(--accent2);border-radius:0 4px 4px 0;
+  }
   .nav-pill{
     margin-left:auto;font-size:10px;font-family:'Space Mono',monospace;
     background:var(--accent);color:#fff;padding:2px 7px;border-radius:20px;
@@ -109,7 +110,6 @@
   nav button.active .nav-pill{display:inline;}
   .sidebar-divider{height:1px;background:rgba(255,255,255,.08);margin:16px 8px;}
   .sidebar-foot{margin-top:auto;display:flex;gap:6px;padding-top:16px;}
-  @media(max-width:800px){.sidebar-foot{margin-top:0;padding-top:0;}}
   .icon-btn{
     all:unset;cursor:pointer;width:34px;height:34px;border-radius:var(--r-sm);
     display:flex;align-items:center;justify-content:center;
@@ -118,6 +118,55 @@
   }
   .icon-btn:hover{background:rgba(255,255,255,.1);color:#fff;}
   button:focus-visible,.icon-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+  /* ===== TOPBAR E GAVETA MOBILE ===== */
+  .mobile-topbar{display:none;}
+  .menu-toggle{display:none;}
+  .sidebar-scrim{display:none;}
+  @media(max-width:800px){
+    .mobile-topbar{
+      display:flex;align-items:center;gap:12px;
+      position:sticky;top:0;z-index:40;
+      background:var(--surface);border-bottom:1px solid var(--line);
+      padding:12px 16px;
+    }
+    [data-theme="dark"] .mobile-topbar{background:#09090B;}
+    .menu-toggle{
+      all:unset;cursor:pointer;width:38px;height:38px;flex-shrink:0;border-radius:var(--r-sm);
+      display:flex;align-items:center;justify-content:center;
+    }
+    .menu-toggle:hover{background:var(--surface2);}
+    .menu-toggle-icon{width:19px;height:13px;position:relative;display:block;}
+    .menu-toggle-icon span{
+      position:absolute;left:0;width:100%;height:2px;background:var(--ink);border-radius:2px;
+      transition:transform .2s,opacity .2s,top .2s;
+    }
+    .menu-toggle-icon span:nth-child(1){top:0;}
+    .menu-toggle-icon span:nth-child(2){top:5.5px;}
+    .menu-toggle-icon span:nth-child(3){top:11px;}
+    .menu-toggle.open .menu-toggle-icon span:nth-child(1){top:5.5px;transform:rotate(45deg);}
+    .menu-toggle.open .menu-toggle-icon span:nth-child(2){opacity:0;}
+    .menu-toggle.open .menu-toggle-icon span:nth-child(3){top:5.5px;transform:rotate(-45deg);}
+    .mobile-topbar-brand{display:flex;align-items:center;gap:9px;}
+    .mobile-topbar-brand span{font-family:'Fraunces',serif;font-weight:700;font-size:17px;color:var(--ink);}
+    .brand-logo-sm{
+      width:26px;height:26px;border-radius:8px;flex-shrink:0;
+      background:linear-gradient(135deg,var(--accent),#818CF8);
+      display:flex;align-items:center;justify-content:center;
+    }
+    .sidebar-scrim{
+      display:block;position:fixed;inset:0;background:rgba(0,0,0,.5);
+      opacity:0;pointer-events:none;transition:opacity .25s;z-index:55;
+    }
+    .sidebar-scrim.open{opacity:1;pointer-events:auto;}
+    .sidebar{
+      position:fixed;top:0;left:0;height:100vh;width:270px;max-width:82vw;
+      transform:translateX(-100%);
+      transition:transform .28s cubic-bezier(.4,0,.2,1);
+      z-index:60;box-shadow:none;
+    }
+    .sidebar.open{transform:translateX(0);box-shadow:0 0 40px rgba(0,0,0,.35);}
+  }
 
   /* ===== MAIN ===== */
   main{padding:40px 44px;max-width:1060px;width:100%;}
@@ -260,6 +309,25 @@
     border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);
   }
   .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:22px;}
+  /* ===== TUTORIAL DE BOAS-VINDAS ===== */
+  .tut-modal{max-width:440px;}
+  .tut-title{margin-bottom:14px;}
+  .tut-body p{margin:0 0 10px;font-size:13.5px;color:var(--ink2);line-height:1.6;}
+  .tut-body p:last-child{margin-bottom:0;}
+  .tut-nav-list{display:flex;flex-direction:column;gap:10px;}
+  .tut-nav-item{display:flex;align-items:center;gap:12px;padding:10px 12px;background:var(--surface2);border-radius:var(--r-sm);border:1px solid var(--line);}
+  .tut-nav-item .tut-nav-icon{font-size:17px;color:var(--accent);flex-shrink:0;width:22px;text-align:center;}
+  .tut-nav-item div{display:flex;flex-direction:column;gap:2px;}
+  .tut-nav-item b{font-size:13px;color:var(--ink);}
+  .tut-nav-item span{font-size:11.5px;color:var(--muted);}
+  .tut-dots{display:flex;justify-content:center;gap:7px;margin-top:20px;}
+  .tut-dot{width:7px;height:7px;border-radius:50%;background:var(--line);transition:background .2s;}
+  .tut-dot.active{background:var(--accent);}
+  .tut-optout{
+    display:flex;align-items:center;gap:8px;margin-top:18px;padding-top:16px;
+    border-top:1px solid var(--line);font-size:12.5px;color:var(--muted);cursor:pointer;
+  }
+  .tut-optout input{width:15px;height:15px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;}
   .wide-modal .modal{max-width:640px;}
   .modal-preview{margin-top:4px;}
   .modal-preview:empty{display:none;}
@@ -492,9 +560,6 @@
   /* ===== RESPONSIVIDADE ===== */
   @media(max-width:800px){
     .page-head h1{font-size:23px;}
-    nav button{white-space:nowrap;flex-shrink:0;}
-    .sidebar{gap:8px;}
-    .sidebar-foot{flex-shrink:0;}
     .donut-wrap{justify-content:center;}
     .calendar-grid{gap:4px;}
     .cal-day{font-size:11px;border-radius:7px;}
@@ -516,7 +581,22 @@
 </head>
 <body data-theme="light">
 <div class="app">
-  <aside class="sidebar">
+  <div class="mobile-topbar">
+    <button class="menu-toggle" id="menuToggle" aria-label="Abrir menu" aria-expanded="false" aria-controls="mainSidebar">
+      <span class="menu-toggle-icon"><span></span><span></span><span></span></span>
+    </button>
+    <div class="mobile-topbar-brand">
+      <div class="brand-logo-sm">
+        <svg viewBox="0 0 24 24" width="15" height="15" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M12 1 L14 10 L18 12 L14 14 L12 23 L12 1 Z" fill="#ffffff"/>
+          <path d="M12 1 L10 10 L6 12 L10 14 L12 23 L12 1 Z" fill="#34D399"/>
+        </svg>
+      </div>
+      <span>Rumo</span>
+    </div>
+  </div>
+  <div class="sidebar-scrim" id="sidebarScrim"></div>
+  <aside class="sidebar" id="mainSidebar">
     <div class="brand-block">
       <div class="brand">
         <div class="brand-logo">
@@ -537,6 +617,7 @@
       <button class="nav-btn" data-page="calendario"><span class="nav-icon">▦</span> Calendário</button>
     </nav>
     <div class="sidebar-foot">
+      <button class="icon-btn" id="helpBtn" title="Ver tutorial" aria-label="Ver tutorial">?</button>
       <button class="icon-btn" id="themeToggle" title="Alternar tema" aria-label="Alternar tema">◐</button>
       <button class="icon-btn" id="exportBtn" title="Exportar dados" aria-label="Exportar dados">↓</button>
       <button class="icon-btn" id="importBtn" title="Importar dados" aria-label="Importar dados">↑</button>
@@ -794,6 +875,105 @@ function showToast(msg){
   setTimeout(()=>t.classList.remove('show'), 2200);
 }
 
+/* ---------- Tutorial de boas-vindas ---------- */
+const ONBOARDING_KEY = 'rumo_onboarding_visto';
+const TUTORIAL_STEPS = [
+  {
+    titulo: 'Bem-vindo ao Rumo',
+    corpo: `<p>O Rumo é o seu painel de finanças pessoais. Tudo o que você registrar fica salvo só no seu próprio navegador — nada é enviado pra nenhum servidor.</p>
+            <p>Esse tutorial rápido mostra onde encontrar cada coisa. Leva menos de um minuto.</p>`
+  },
+  {
+    titulo: 'As 5 áreas do app',
+    corpo: `<div class="tut-nav-list">
+              <div class="tut-nav-item"><span class="tut-nav-icon">◈</span><div><b>Dashboard</b><span>Visão geral: gráficos de gastos por categoria</span></div></div>
+              <div class="tut-nav-item"><span class="tut-nav-icon">◉</span><div><b>Contas</b><span>Contas a pagar, recorrências e cartão de crédito</span></div></div>
+              <div class="tut-nav-item"><span class="tut-nav-icon">◎</span><div><b>Metas</b><span>Investimentos, metas e estudo de qual alocação usar</span></div></div>
+              <div class="tut-nav-item"><span class="tut-nav-icon">◌</span><div><b>Renda</b><span>Salário, vale-alimentação e renda extra</span></div></div>
+              <div class="tut-nav-item"><span class="tut-nav-icon">▦</span><div><b>Calendário</b><span>Contagem de dias úteis do mês</span></div></div>
+            </div>`
+  },
+  {
+    titulo: 'Onde fica o menu',
+    corpo: `<p>No computador, o menu com essas 5 áreas fica fixo na barra à esquerda da tela.</p>
+            <p>No celular, ele vira uma <b>faixa no topo que rola de lado</b> — arraste o dedo para os lados nela pra ver todas as opções, incluindo as que ficam fora da tela.</p>`
+  },
+  {
+    titulo: 'Pronto pra começar',
+    corpo: `<p>Sempre que quiser rever esse tutorial, é só clicar no botão <b>"?"</b> no rodapé do menu.</p>
+            <p>Agora é só começar a registrar suas contas e metas!</p>`
+  }
+];
+let tutStepAtual = 0;
+
+function renderTutorialStep(overlay){
+  const step = TUTORIAL_STEPS[tutStepAtual];
+  overlay.querySelector('.tut-title').textContent = step.titulo;
+  overlay.querySelector('.tut-body').innerHTML = step.corpo;
+  overlay.querySelectorAll('.tut-dot').forEach((d,i)=>d.classList.toggle('active', i===tutStepAtual));
+  overlay.querySelector('.tut-back').style.visibility = tutStepAtual===0 ? 'hidden' : 'visible';
+  overlay.querySelector('.tut-next').textContent = tutStepAtual===TUTORIAL_STEPS.length-1 ? 'Começar a usar' : 'Próximo';
+}
+
+function abrirTutorial(mostrarOptOut){
+  tutStepAtual = 0;
+  const overlay = document.createElement('div');
+  overlay.className = 'overlay tutorial-modal';
+  overlay.innerHTML = `<div class="modal tut-modal">
+    <h3 class="tut-title"></h3>
+    <div class="tut-body"></div>
+    <div class="tut-dots">${TUTORIAL_STEPS.map(()=>`<span class="tut-dot"></span>`).join('')}</div>
+    ${mostrarOptOut ? `<label class="tut-optout"><input type="checkbox" id="tutDontShow"> Não mostrar este tutorial toda vez que eu entrar</label>` : ''}
+    <div class="modal-actions" style="justify-content:space-between;">
+      <button class="btn ghost tut-back">Voltar</button>
+      <button class="btn tut-next">Próximo</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+  renderTutorialStep(overlay);
+
+  const fechar = ()=>{
+    const chk = overlay.querySelector('#tutDontShow');
+    if(chk && chk.checked) localStorage.setItem(ONBOARDING_KEY, '1');
+    overlay.remove();
+  };
+  overlay.querySelector('.tut-back').addEventListener('click', ()=>{
+    if(tutStepAtual>0){ tutStepAtual--; renderTutorialStep(overlay); }
+  });
+  overlay.querySelector('.tut-next').addEventListener('click', ()=>{
+    if(tutStepAtual < TUTORIAL_STEPS.length-1){ tutStepAtual++; renderTutorialStep(overlay); }
+    else fechar();
+  });
+  overlay.addEventListener('click', (e)=>{ if(e.target===overlay) fechar(); });
+}
+
+document.getElementById('helpBtn').addEventListener('click', ()=>abrirTutorial(false));
+if(!localStorage.getItem(ONBOARDING_KEY)){
+  abrirTutorial(true);
+}
+
+/* ---------- Menu mobile (gaveta) ---------- */
+const mainSidebar = document.getElementById('mainSidebar');
+const menuToggle = document.getElementById('menuToggle');
+const sidebarScrim = document.getElementById('sidebarScrim');
+function abrirGaveta(){
+  mainSidebar.classList.add('open');
+  sidebarScrim.classList.add('open');
+  menuToggle.classList.add('open');
+  menuToggle.setAttribute('aria-expanded','true');
+}
+function fecharGaveta(){
+  mainSidebar.classList.remove('open');
+  sidebarScrim.classList.remove('open');
+  menuToggle.classList.remove('open');
+  menuToggle.setAttribute('aria-expanded','false');
+}
+menuToggle.addEventListener('click', ()=>{
+  mainSidebar.classList.contains('open') ? fecharGaveta() : abrirGaveta();
+});
+sidebarScrim.addEventListener('click', fecharGaveta);
+window.addEventListener('resize', ()=>{ if(window.innerWidth>800) fecharGaveta(); });
+
 /* ---------- Navegação ---------- */
 const pages = ['dashboard','contas','investimentos','renda','calendario'];
 document.querySelectorAll('.nav-btn').forEach(btn=>{
@@ -805,6 +985,7 @@ document.querySelectorAll('.nav-btn').forEach(btn=>{
     if(btn.dataset.page==='contas'){ gerarContasRecorrentes(); renderContas(); renderRecorrencias(); renderCartoes(); }
     if(btn.dataset.page==='renda') renderRenda();
     if(btn.dataset.page==='calendario') renderCalendario();
+    fecharGaveta();
   });
 });
 
