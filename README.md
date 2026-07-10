@@ -19,7 +19,7 @@ Painel pessoal de finanças, 100% local: tudo fica guardado só no seu navegador
 - **Calendário**: dias úteis do mês, feriados nacionais e municipais (Campo Grande/MS)
 - **Comparativo mês a mês**: total e por categoria vs. o mês anterior
 - **Alertas automáticos**: gastos fora do padrão (anomalias) e assinaturas antigas que talvez você não use mais
-- **Importar extrato**: sobe um arquivo OFX ou CSV do seu banco, o Rumo identifica o formato sozinho e mostra uma prévia editável antes de importar como contas
+- **Importar extrato**: sobe um arquivo OFX, CSV ou planilha Excel (.xlsx) do seu banco ou dos seus próprios controles, o Rumo identifica o formato sozinho e mostra uma prévia editável antes de importar como contas
 - **PIN de acesso**: bloqueio local opcional pra proteger o app no seu navegador
 - **PWA instalável**: dá pra instalar como app no computador ou celular, com suporte a uso offline
 - **Exportar/Importar**: backup completo dos dados em JSON, a qualquer momento
