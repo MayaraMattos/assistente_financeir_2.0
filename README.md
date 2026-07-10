@@ -6,7 +6,7 @@ Painel pessoal de finanças, 100% local: tudo fica guardado só no seu navegador
 
 ## Tutorial completo
 
-![Tutorial completo do Rumo](tutorial-completo.gif)
+<video src="tutorial-completo.mp4" controls width="700"></video>
 
 *Dashboard com alertas → Contas (criar, marcar como paga, recorrência, fatura) → compra parcelada no cartão → Metas (com estudo de alocação) → aporte → Renda (salário, vale-alimentação, renda extra) → Calendário → tema escuro → PIN de acesso.*
 
@@ -19,6 +19,7 @@ Painel pessoal de finanças, 100% local: tudo fica guardado só no seu navegador
 - **Calendário**: dias úteis do mês, feriados nacionais e municipais (Campo Grande/MS)
 - **Comparativo mês a mês**: total e por categoria vs. o mês anterior
 - **Alertas automáticos**: gastos fora do padrão (anomalias) e assinaturas antigas que talvez você não use mais
+- **Importar extrato**: sobe um arquivo OFX ou CSV do seu banco, o Rumo identifica o formato sozinho e mostra uma prévia editável antes de importar como contas
 - **PIN de acesso**: bloqueio local opcional pra proteger o app no seu navegador
 - **PWA instalável**: dá pra instalar como app no computador ou celular, com suporte a uso offline
 - **Exportar/Importar**: backup completo dos dados em JSON, a qualquer momento
@@ -44,5 +45,5 @@ index.html          → app inteiro (HTML + CSS + JS)
 manifest.json        → manifesto do PWA
 sw.js                 → service worker (cache offline)
 icons/                → ícones do PWA (192px, 512px, versões maskable)
-tutorial-completo.gif → GIF de demonstração (este README)
+tutorial-completo.mp4 → vídeo de demonstração (este README)
 ```
