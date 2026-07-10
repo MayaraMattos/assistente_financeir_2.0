@@ -1024,7 +1024,11 @@ function loadData(){
   return { contas: [], investimentos: [], salario:{ valor:0, percentual:40, valorDiarioVA:0 }, valeAlimentacao: [], recorrencias: [], cartoes: [], rendaExtra: [], orcamentos: {}, parcelamentos: [], assinaturasRevisadas: {} };
 }
 function saveData(){
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }catch(e){
+    showToast('Não consegui salvar — este ambiente está bloqueando o armazenamento local. Abra o Rumo direto numa aba do navegador (não numa pré-via/preview) e tente de novo.');
+  }
 }
 
 let state = loadData();
@@ -1032,6 +1036,13 @@ let state = loadData();
 /* ===================== PIN de acesso ===================== */
 const PIN_KEY = 'rumo_pin_hash';
 const PIN_SESSION_KEY = 'rumo_unlocked';
+
+function storageGet(key){ try{ return localStorage.getItem(key); }catch(e){ return null; } }
+function storageSet(key, val){ try{ localStorage.setItem(key, val); return true; }catch(e){ return false; } }
+function storageRemove(key){ try{ localStorage.removeItem(key); }catch(e){} }
+function sessionGet(key){ try{ return sessionStorage.getItem(key); }catch(e){ return null; } }
+function sessionSet(key, val){ try{ sessionStorage.setItem(key, val); }catch(e){} }
+function sessionRemove(key){ try{ sessionStorage.removeItem(key); }catch(e){} }
 
 async function hashPin(pin){
   const texto = 'rumo_salt_v1_' + pin;
@@ -1062,8 +1073,8 @@ document.getElementById('lockForm').addEventListener('submit', async (e)=>{
   e.preventDefault();
   const input = document.getElementById('lockPinInput');
   const hash = await hashPin(input.value);
-  if(hash === localStorage.getItem(PIN_KEY)){
-    sessionStorage.setItem(PIN_SESSION_KEY, '1');
+  if(hash === storageGet(PIN_KEY)){
+    sessionSet(PIN_SESSION_KEY, '1');
     esconderTelaBloqueio();
   } else {
     document.getElementById('lockError').textContent = 'PIN incorreto';
@@ -1073,7 +1084,7 @@ document.getElementById('lockForm').addEventListener('submit', async (e)=>{
 });
 
 function abrirConfigPin(){
-  const temPin = !!localStorage.getItem(PIN_KEY);
+  const temPin = !!storageGet(PIN_KEY);
   const overlay = document.createElement('div');
   overlay.className = 'overlay';
   overlay.innerHTML = `<div class="modal" style="max-width:380px;">
@@ -1104,9 +1115,9 @@ function abrirConfigPin(){
       const atual = overlay.querySelector('[name="pinAtual"]').value;
       if(!atual){ showToast('Digite o PIN atual para remover a proteção'); return; }
       const hash = await hashPin(atual);
-      if(hash !== localStorage.getItem(PIN_KEY)){ showToast('PIN atual incorreto'); return; }
-      localStorage.removeItem(PIN_KEY);
-      sessionStorage.removeItem(PIN_SESSION_KEY);
+      if(hash !== storageGet(PIN_KEY)){ showToast('PIN atual incorreto'); return; }
+      storageRemove(PIN_KEY);
+      sessionRemove(PIN_SESSION_KEY);
       overlay.remove();
       showToast('Proteção por PIN removida');
     });
@@ -1121,22 +1132,22 @@ function abrirConfigPin(){
 
     if(temPin){
       const hashAtual = await hashPin(atual);
-      if(hashAtual !== localStorage.getItem(PIN_KEY)){ showToast('PIN atual incorreto'); return; }
+      if(hashAtual !== storageGet(PIN_KEY)){ showToast('PIN atual incorreto'); return; }
       if(!novo){ overlay.remove(); showToast('Nenhuma alteração feita'); return; }
     }
     if(!novo || novo.length < 4){ showToast('O PIN precisa ter pelo menos 4 dígitos'); return; }
     if(novo !== confirma){ showToast('Os PINs não coincidem'); return; }
 
     const hashNovo = await hashPin(novo);
-    localStorage.setItem(PIN_KEY, hashNovo);
-    sessionStorage.setItem(PIN_SESSION_KEY, '1');
+    if(!storageSet(PIN_KEY, hashNovo)){ showToast('Não consegui salvar o PIN — este ambiente está bloqueando o armazenamento local.'); return; }
+    sessionSet(PIN_SESSION_KEY, '1');
     overlay.remove();
     showToast(temPin ? 'PIN atualizado' : 'PIN criado — o Rumo vai pedir esse PIN na próxima vez que você abrir');
   });
 }
 document.getElementById('pinBtn').addEventListener('click', abrirConfigPin);
 
-if(localStorage.getItem(PIN_KEY) && sessionStorage.getItem(PIN_SESSION_KEY) !== '1'){
+if(storageGet(PIN_KEY) && sessionGet(PIN_SESSION_KEY) !== '1'){
   mostrarTelaBloqueio();
 }
 
@@ -1233,7 +1244,7 @@ function abrirTutorial(mostrarOptOut){
 
   const fechar = ()=>{
     const chk = overlay.querySelector('#tutDontShow');
-    if(chk && chk.checked) localStorage.setItem(ONBOARDING_KEY, '1');
+    if(chk && chk.checked){ try{ localStorage.setItem(ONBOARDING_KEY, '1'); }catch(e){} }
     overlay.remove();
   };
   overlay.querySelector('#tutCloseX').addEventListener('click', fechar);
@@ -1248,7 +1259,9 @@ function abrirTutorial(mostrarOptOut){
 }
 
 document.getElementById('helpBtn').addEventListener('click', ()=>abrirTutorial(false));
-if(!localStorage.getItem(ONBOARDING_KEY)){
+let onboardingVisto = true;
+try{ onboardingVisto = !!localStorage.getItem(ONBOARDING_KEY); }catch(e){ /* ambiente sem localStorage: não força o tutorial */ }
+if(!onboardingVisto){
   abrirTutorial(true);
 }
 
@@ -1303,10 +1316,12 @@ document.querySelectorAll('.nav-btn').forEach(btn=>{
 const themeToggle = document.getElementById('themeToggle');
 function applyTheme(t){
   document.body.setAttribute('data-theme', t);
-  localStorage.setItem('rumo_theme', t);
+  try{ localStorage.setItem('rumo_theme', t); }catch(e){ /* segue sem persistir o tema */ }
   themeToggle.textContent = t==='dark' ? '◑' : '◐';
 }
-applyTheme(localStorage.getItem('rumo_theme') || 'light');
+let temaSalvo = 'light';
+try{ temaSalvo = localStorage.getItem('rumo_theme') || 'light'; }catch(e){ /* ambiente sem localStorage: usa claro por padrão */ }
+applyTheme(temaSalvo);
 themeToggle.addEventListener('click', ()=>{
   applyTheme(document.body.getAttribute('data-theme')==='dark' ? 'light' : 'dark');
 });
@@ -2479,14 +2494,12 @@ function renderSalarioResumo(){
 
   if(salario<=0){
     el.innerHTML = `<div class="salario-card"><div class="label">Salário</div><div class="hint" style="margin-top:8px;">Cadastre seu salário na aba Renda para ver esse resumo.</div></div>
-      <div class="salario-card"><div class="label">Salário após contas do mês</div><div class="hint" style="margin-top:8px;">—</div></div>`;
+      <div class="salario-card"><div class="label">Salário após contas pendentes</div><div class="hint" style="margin-top:8px;">—</div></div>`;
     return;
   }
 
-  const hoje = new Date();
-  const mesAtual = hoje.getFullYear()+'-'+String(hoje.getMonth()+1).padStart(2,'0');
-  const totalContasMes = state.contas.filter(c=> c.vencimento.slice(0,7)===mesAtual).reduce((s,c)=>s+c.valor,0);
-  const saldo = salario - totalContasMes;
+  const totalPendentes = state.contas.filter(c=>!c.pago).reduce((s,c)=>s+c.valor,0);
+  const saldo = salario - totalPendentes;
 
   el.innerHTML = `
     <div class="salario-card">
@@ -2495,9 +2508,9 @@ function renderSalarioResumo(){
       <div class="hint">Valor bruto cadastrado em Renda</div>
     </div>
     <div class="salario-card${saldo<0?' negativo':''}">
-      <div class="label">Salário após contas do mês</div>
+      <div class="label">Salário após contas pendentes</div>
       <div class="value">${fmtBRL(saldo)}</div>
-      <div class="hint">${fmtBRL(salario)} − ${fmtBRL(totalContasMes)} em contas cadastradas este mês</div>
+      <div class="hint">${fmtBRL(salario)} − ${fmtBRL(totalPendentes)} em contas ainda não pagas (mesmo total do card "A pagar este mês")</div>
     </div>`;
 }
 
